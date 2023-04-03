@@ -3,9 +3,9 @@ import "./GameObject.js"
 import "./RectangleCollider.js"
 import "./SceneContainer.js"
 import "./SceneManager.js"
-
 import "./Transform.js"
 import "./Camera.js"
+import "./Textbox.js"
 
 let canvas = document.querySelector("#canv")
 let ctx = canvas.getContext("2d")
@@ -14,6 +14,10 @@ let keysDown = []
 
 document.addEventListener("keydown", keyDown)
 document.addEventListener("keyup", keyUp)
+
+/*document.addEventListener("mousedown", mouseDown)
+document.addEventListener("mouseup", mouseUp)
+document.addEventListener("mousemove", mouseMove)*/
 
 let paused = false
 
@@ -27,6 +31,21 @@ function keyDown(e) {
     paused = !paused
   }
 }
+
+/*function mouseDown(e)
+{
+
+}
+
+function mouseUp(e)
+{
+
+}
+
+function mouseMove(e)
+{
+  
+}*/
 
 function engineUpdate() {
   if (paused) {
@@ -98,8 +117,8 @@ for (let gameObject of sceneManager.getCurrentScene().gameObjects)
 }
 }
 
-let aspectRatio = 1
-let logicalWidth = 100
+let aspectRatio = 16/9
+let logicalWidth = 500
 
 function engineDraw() {
   canvas.width = window.innerWidth
@@ -127,9 +146,9 @@ function engineDraw() {
   }
 
   ctx.save()
-  ctx.translate(offsetX, offsetY)
-  ctx.translate(ctx.canvas.width/2, ctx.canvas.height/2)
+  //ctx.translate(offsetX, offsetY)
   let logicalScale = actualWidth / logicalWidth
+  ctx.translate(ctx.canvas.width/2, ctx.canvas.height/2)
   ctx.scale(logicalScale, logicalScale)
 
   ctx.translate(-Camera.main.Transform.x, -Camera.main.Transform.y)

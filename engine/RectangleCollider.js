@@ -10,6 +10,7 @@ class RectangleCollider extends Component
 
   constructor(colliderWidth, colliderHeight, colliderColor, toDraw)
   {
+    super()
     this.colliderWidth = colliderWidth
     this.colliderHeight = colliderHeight
     this.colliderColor = colliderColor
