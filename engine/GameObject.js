@@ -5,6 +5,7 @@ class gameObject
   gameObjectStarted = false
   markedForDestroy = false
   markedDoNotDestroyOnLoad = false
+  layer = 0
 
   constructor(name)
   {

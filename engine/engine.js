@@ -1,23 +1,27 @@
 import "./Component.js"
 import "./GameObject.js"
 import "./RectangleCollider.js"
+import "./CircleCollider.js"
 import "./SceneContainer.js"
 import "./SceneManager.js"
 import "./Transform.js"
 import "./Camera.js"
 import "./Textbox.js"
+import "./Time.js"
 
 let canvas = document.querySelector("#canv")
 let ctx = canvas.getContext("2d")
 
 let keysDown = []
+let mouseX
+let mouseY
 
 document.addEventListener("keydown", keyDown)
 document.addEventListener("keyup", keyUp)
 
-/*document.addEventListener("mousedown", mouseDown)
+document.addEventListener("mousedown", mouseDown)
 document.addEventListener("mouseup", mouseUp)
-document.addEventListener("mousemove", mouseMove)*/
+document.addEventListener("mousemove", mouseMove)
 
 let paused = false
 
@@ -32,20 +36,26 @@ function keyDown(e) {
   }
 }
 
-/*function mouseDown(e)
+function mouseDown(e)
 {
-
+  console.log("mouseDown: " + e.clientX + " " + e.clientY)
 }
 
 function mouseUp(e)
 {
-
+  console.log("mouseUp: " + e.clientX + " " + e.clientY)
 }
 
 function mouseMove(e)
 {
-  
-}*/
+  //this.mouseX = e.clientX
+  //this.mouseY = e.clientY
+
+  let rect = canvas.getBoundingClientRect()
+  this.mouseX = e.clientX - rect.left
+  this.mouseY = e.clientY - rect.top
+  console.log("mouseMove: " + this.mouseX + " " + this.mouseY)
+}
 
 function engineUpdate() {
   if (paused) {
@@ -153,8 +163,12 @@ function engineDraw() {
 
   ctx.translate(-Camera.main.Transform.x, -Camera.main.Transform.y)
 
+let min = sceneManager.getCurrentScene().gameObjects.map(go => go.layer).reduce((previous,current)=>Math.min(previous,current))
+let max = sceneManager.getCurrentScene().gameObjects.map(go => go.layer).reduce((previous,current)=>Math.max(previous,current))
   
-
+for (let i = min; i <= max; i++)
+{
+  let gameObjects = sceneManager.getCurrentScene().gameObjects.filter(go => go.layer==i)
   for (let gameObject of sceneManager.getCurrentScene().gameObjects)
   {
     for (let component of gameObject.components)
@@ -165,6 +179,7 @@ function engineDraw() {
       }
     }
   }
+}
 
   ctx.restore()
 
@@ -194,7 +209,7 @@ function start(title) {
     engineDraw()
   }
 
-  setInterval(gameLoop, 1000 / 60)
+  setInterval(gameLoop, 1000 * Time.deltaTime)
 }
 
 window.start = start

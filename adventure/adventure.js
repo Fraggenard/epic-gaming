@@ -7,12 +7,20 @@ class StartControllerGameObject extends gameObject
     {
         this.addComponent(new StartControllerComponent())
         console.log("added start component")
+        let debugAccel = new Textbox("white", "Impact", 50,"ba","left")
+        debugAccel.componentName = "debugAccel"
+        this.addComponent(debugAccel)
     }
 }
 
 class StartControllerComponent extends Component
 {
-
+    update()
+    {
+        let player = gameObject.getObjectByName("playerGameObject").getComponent("playerComponent").pAccel
+        
+        this.componentParent.getComponent("debugAccel").textString = player
+    }
 }
 
 class StartDrawGameObject extends gameObject
@@ -20,7 +28,7 @@ class StartDrawGameObject extends gameObject
     start()
     {
         this.addComponent(new StartDrawComponent())
-        this.addComponent(new Textbox("white", "Impact", 50, "JSQuest", "center"))
+        //this.addComponent(new Textbox("white", "Impact", 50, "JSQuest", "center"))
         console.log("added draw component")
     }
 }
@@ -29,6 +37,8 @@ class StartDrawComponent extends Component
 {
     draw(ctx)
     {
+        
+        
         /*let xo = sceneManager.getCurrentScene().xOriginPoint
         let yo = sceneManager.getCurrentScene().yOriginPoint
 
@@ -61,11 +71,13 @@ class playerGameObject extends gameObject
 
 class playerComponent extends Component
 {
+    componentName = "playerComponent"
+    
     //px = this.getTransform().x
     //py = this.getTransform().y
     pvx
     pvy
-    pAccel
+    pAccel = 0
     IS_MOVING
     IS_ATTACKING
     
@@ -76,6 +88,7 @@ class playerComponent extends Component
         this.pAccel = 0
         this.IS_MOVING = false
         this.IS_ATTACKING = false
+        console.log("started player")
     }
 
     update()
@@ -141,8 +154,46 @@ class playerComponent extends Component
             this.pvy = this.pvy / this.magnitude
         }
 
-        this.getTransform().x += this.pvx
-        this.getTransform().y += this.pvy
+        this.getTransform().x += this.pvx * this.pAccel
+        this.getTransform().y += this.pvy * this.pAccel
+    }
+}
+
+class shooterGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new shooterComponent())
+        this.addComponent(new CircleCollider(5, "green", true))
+    }
+}
+
+class shooterComponent extends Component
+{
+    componentName = "shooterComponent"
+    
+    //px = this.getTransform().x
+    //py = this.getTransform().y
+    pvx
+    pvy
+    pAccel = 0
+    IS_MOVING
+    IS_SHOOTING
+    player = gameObject.getObjectByName("playerGameObject")
+    
+    start()
+    {
+        this.pvx = 0
+        this.pvy = 0
+        this.pAccel = 0
+        this.IS_MOVING = false
+        this.IS_SHOOTING = false
+        console.log("started schutplayer")
+    }
+
+    update()
+    {
+        
     }
 }
 
@@ -150,7 +201,55 @@ class playerDrawComponent extends Component
 {
     draw(ctx)
     {
+       
+    }
+}
 
+class cameraTrackerGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new cameraTrackerComponent())
+    }
+
+    update()
+    {
+        
+    }
+}
+
+class cameraTrackerComponent extends Component
+{
+    componentName = "cameraTrackerComponent"
+    
+    update()
+    {
+        let player = gameObject.getObjectByName("playerGameObject")
+
+        let boundingBox = 30
+        let differenceX = player.Transform.x - this.getTransform().x
+        let differenceY = player.Transform.y - this.getTransform().y
+
+        if (differenceX > boundingBox)
+        {
+            this.getTransform().x += .2 * (differenceX - boundingBox)
+        }
+        else if (differenceX < -boundingBox)
+        {
+            this.getTransform().x += .2 * (differenceX + boundingBox)
+        }
+
+        if (differenceY > boundingBox)
+        {
+            this.getTransform().y += .2 * (differenceY - boundingBox)
+        }
+        else if (differenceY < -boundingBox)
+        {
+            this.getTransform().y += .2 * (differenceY + boundingBox)
+        }
+
+        Camera.main.Transform.x = this.getTransform().x
+        Camera.main.Transform.y = this.getTransform().y
     }
 }
 
@@ -163,7 +262,10 @@ class TitleScene extends sceneContainer
         console.log("added controller object")
         this.addGameObject(new StartDrawGameObject())
         console.log("added draw object")
-        this.addGameObject(new playerGameObject())
+        this.addGameObject(new playerGameObject("playerGameObject"))
+        console.log("added the player")
+        this.addGameObject(new cameraTrackerGameObject("cameraTrackerGameObject"))
+        console.log("camera tracking enabled")
 
     }
     update()
