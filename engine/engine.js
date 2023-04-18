@@ -92,7 +92,7 @@ for (let gameObject of sceneManager.getCurrentScene().gameObjects)
 {
   if (!gameObject.gameObjectStarted && gameObject.start)
   {
-    gameObject.start()
+    gameObject.start(ctx)
     gameObject.gameObjectStarted = true
   }
 }
@@ -103,7 +103,7 @@ for (let gameObject of sceneManager.getCurrentScene().gameObjects)
   {
     if (!component.componentStarted && component.start)
     {
-      component.start()
+      component.start(ctx)
       component.componentStarted = true
     }
   }
@@ -125,7 +125,7 @@ for (let gameObject of sceneManager.getCurrentScene().gameObjects)
   {
     if(component.update)
     {
-      component.update()
+      component.update(ctx)
     }
   }
 }
@@ -252,3 +252,5 @@ window.engineUpdate = engineUpdate
 window.engineDraw = engineDraw
 
 window.keysDown = keysDown
+
+window.EngineGlobals = EngineGlobals

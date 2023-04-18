@@ -59,8 +59,8 @@ class Camera extends Component
     y -= ctx.canvas.height / 2
     x /= logicalScaling
     y /= logicalScaling
-    x += Camera.main.transform.x
-    y += Camera.main.transform.y
+    x += Camera.main.Transform.x
+    y += Camera.main.Transform.y
 
     return {x,y}
   }

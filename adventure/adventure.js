@@ -1,6 +1,9 @@
 import "/engine/engine.js"
 //Title Screen
 
+//let canvas = document.querySelector("#canv")
+//let ctx = canvas.getContext("2d")
+
 class StartControllerGameObject extends gameObject
 {
     start()
@@ -73,11 +76,11 @@ class playerComponent extends Component
 {
     componentName = "playerComponent"
     
-    //px = this.getTransform().x
-    //py = this.getTransform().y
     pvx
     pvy
     pAccel = 0
+    playerWidth
+    playerHeight
     IS_MOVING
     IS_ATTACKING
     
@@ -86,6 +89,8 @@ class playerComponent extends Component
         this.pvx = 0
         this.pvy = 0
         this.pAccel = 0
+        this.playerWidth = this.componentParent.getComponent("RectangleCollider").colliderWidth
+        this.playerHeight = this.componentParent.getComponent("RectangleCollider").colliderHeight
         this.IS_MOVING = false
         this.IS_ATTACKING = false
         console.log("started player")
@@ -155,7 +160,7 @@ class playerComponent extends Component
         }
 
         this.getTransform().x += this.pvx * this.pAccel
-        this.getTransform().y += this.pvy * this.pAccel
+        this.getTransform().y += this.pvy * this.pAccel 
     }
 }
 
@@ -164,7 +169,7 @@ class shooterGameObject extends gameObject
     start()
     {
         this.addComponent(new shooterComponent())
-        this.addComponent(new CircleCollider(5, "green", true))
+        this.addComponent(new CircleCollider(2, "green", true))
     }
 }
 
@@ -172,28 +177,53 @@ class shooterComponent extends Component
 {
     componentName = "shooterComponent"
     
-    //px = this.getTransform().x
-    //py = this.getTransform().y
-    pvx
-    pvy
-    pAccel = 0
-    IS_MOVING
-    IS_SHOOTING
+    scaleFactor = 1/4
+    maxReach = 25
+    mx
+    my
     player = gameObject.getObjectByName("playerGameObject")
     
     start()
     {
-        this.pvx = 0
-        this.pvy = 0
-        this.pAccel = 0
-        this.IS_MOVING = false
-        this.IS_SHOOTING = false
+        //this.getTransform().x = this.player.Transform.x + 5
+        //this.getTransform().y = this.player.Transform.y + 5
         console.log("started schutplayer")
     }
 
-    update()
+    update(ctx)
     {
+        this.getTransform().x = this.player.Transform.x
+        this.getTransform().y = this.player.Transform.y
         
+        this.mx = Input.mouseX
+        this.my = Input.mouseY
+
+        let worldSpaceValues = Camera.toWorldSpace(this.mx,this.my,ctx)
+
+        this.mx = worldSpaceValues.x
+        this.my = worldSpaceValues.y
+
+        console.log("X: " + this.mx + " Y: " + this.my)
+
+        let differenceX = this.mx - this.getTransform().x
+        let differenceY = this.my - this.getTransform().y
+        
+        let scaledX = differenceX * this.scaleFactor
+        let scaledY = differenceY * this.scaleFactor
+
+        let theta = Math.atan2(scaledY, scaledX)
+
+        //if ((scaledX * scaledX) + (scaledY * scaledY) > this.maxReach)
+        //{
+            scaledX = this.maxReach * Math.cos(theta)
+            scaledY = this.maxReach * Math.sin(theta)
+       // }
+
+        this.getTransform().x += (scaledX + (this.player.getComponent("playerComponent").playerWidth / 2))
+        this.getTransform().y += (scaledY + (this.player.getComponent("playerComponent").playerHeight / 2))
+
+        //console.log(this.player.getComponent("playerComponent").playerWidth)
+
     }
 }
 
@@ -266,6 +296,8 @@ class TitleScene extends sceneContainer
         console.log("added the player")
         this.addGameObject(new cameraTrackerGameObject("cameraTrackerGameObject"))
         console.log("camera tracking enabled")
+        this.addGameObject(new shooterGameObject())
+        console.log("shooter added to scene")
 
     }
     update()
