@@ -17,7 +17,7 @@ class Textbox extends Component
         this.textAlign = align
     }
 
-    draw(ctx)
+    drawGUI(ctx)
     {
         ctx.fillStyle = this.textColor
         ctx.font = "${textSize}px ${textFont}"

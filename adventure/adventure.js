@@ -21,8 +21,10 @@ class StartControllerComponent extends Component
     update()
     {
         let player = gameObject.getObjectByName("playerGameObject").getComponent("playerComponent").pAccel
+
+        let count = sceneManager.getCurrentScene().gameObjects.length
         
-        this.componentParent.getComponent("debugAccel").textString = player
+        this.componentParent.getComponent("debugAccel").textString = "game objects = " + count
     }
 }
 
@@ -227,6 +229,189 @@ class shooterComponent extends Component
     }
 }
 
+class bulletGameObject extends gameObject
+{
+    start()
+    {
+        //this.addComponent(new bulletComponent())
+        this.addComponent(new RectangleCollider(2, 2, "orange", true))
+    }
+}
+
+class bulletComponent extends Component
+{
+    componentName = "bulletComponent"
+
+    shootergo = gameObject.getObjectByName("shooterGameObject")
+    shooter = this.shootergo.getComponent("shooterComponent")
+    
+    bvx
+    bvy
+    bulletSpeed = 10
+    lifeTime = 0
+    maxlifeTime = 100
+    mx
+    my
+
+    constructor(mx,my)
+    {
+        super()
+        this.mx = mx
+        this.my = my
+    }
+    
+    start()
+    {
+        this.bvx = 0
+        this.bvy = 0
+        
+        this.getTransform().x = this.shooter.getTransform().x
+        this.getTransform().y = this.shooter.getTransform().y
+
+        let differenceX = this.mx - this.getTransform().x
+        let differenceY = this.my - this.getTransform().y
+
+        console.log(differenceX + " " + differenceY)
+
+        let theta = Math.atan2(differenceY, differenceX)
+
+        console.log(theta + "")
+
+        differenceX = this.bulletSpeed * Math.cos(theta)
+        differenceY = this.bulletSpeed * Math.sin(theta)
+
+        this.bvx += differenceX
+        this.bvy += differenceY
+    }
+
+    update(ctx)
+    {   
+            this.getTransform().x += this.bvx
+            this.getTransform().y += this.bvy
+
+            this.lifeTime++
+            
+            if (this.lifeTime >= this.maxlifeTime)
+            {
+                this.componentParent.destroy()
+            }
+    }
+}
+
+class shooterControllerGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new shooterControllerComponent())
+    }
+} 
+
+class shooterControllerComponent extends Component
+{
+    componentName = "shooterControllerComponent"
+
+    currentScene = sceneManager.getCurrentScene()
+
+    currentWeapon
+    reserveSize = 500
+    magSize = 50
+    currentReserve
+    currentMag
+    IS_RELOADING
+    
+    start()
+    {
+        this.currentReserve = this.reserveSize
+        this.currentMag = this.magSize
+    }
+
+    update(ctx)
+    {
+        if (Input.mousedown && this.currentMag > 0)
+        {
+            let worldcoords = Camera.toWorldSpace(Input.mouseX, Input.mouseY, ctx)
+            let spawnedBullet = new bulletGameObject("bulletGameObject")
+            spawnedBullet.addComponent(new bulletComponent(worldcoords.x, worldcoords.y))
+            gameObject.instantiate(spawnedBullet)
+            this.currentMag--
+            console.log("pew!")
+        }
+        else if (this.currentMag <= 0)
+        {
+            if (this.currentReserve > 0)
+            {
+                if (this.currentReserve < this.magSize)
+                {
+                    this.currentMag += this.currentReserve
+                    this.currentReserve -= this.currentReserve
+                }
+                else
+                {
+                    this.currentMag += this.magSize
+                    this.currentReserve -= this.magSize
+                }
+            }
+        }
+    }
+}
+
+class shooterControllerDrawGameObject extends gameObject
+{
+    start()
+    {
+        let ammoCounter = new Textbox("white", "Impact", "heehoo", "right")
+        ammoCounter.componentName = "ammoCounter"
+        this.addComponent(ammoCounter)
+        this.addComponent(new shooterControllerDrawComponent())
+    }
+}
+
+class shooterControllerDrawComponent extends Component
+{
+    ammoCon
+    ammoConCo
+    reserve
+    mag
+    ammoText
+    ammoString
+    
+    start()
+    {
+        this.ammoCon = gameObject.getObjectByName("shooterControllerGameObject")
+        //this.ammoCon = this.ammoConCo.getComponent("shooterControllerComponent")
+        this.ammoConCo = this.ammoCon.getComponent("shooterControllerComponent")
+        this.ammoText = this.componentParent.getComponent("ammoCounter")
+        this.ammoText.getTransform().y += 50
+    }
+
+    update()
+    {
+        this.reserve = this.ammoConCo.currentReserve
+        this.mag = this.ammoConCo.currentMag
+        this.ammoString = this.mag + "/" + this.reserve
+        this.ammoText.textString = this.ammoString
+    }
+}
+
+/*class ammoControllerGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new ammoControllerComponent)
+        this.addComponent(new ammoControllerDrawComponent)
+    }
+} 
+
+class ammoControllerComponent extends Component
+{
+
+}
+
+class ammoControllerDrawComponent extends Component
+{
+
+}*/
+
 class playerDrawComponent extends Component
 {
     draw(ctx)
@@ -296,8 +481,11 @@ class TitleScene extends sceneContainer
         console.log("added the player")
         this.addGameObject(new cameraTrackerGameObject("cameraTrackerGameObject"))
         console.log("camera tracking enabled")
-        this.addGameObject(new shooterGameObject())
+        this.addGameObject(new shooterGameObject("shooterGameObject"))
         console.log("shooter added to scene")
+        this.addGameObject(new shooterControllerGameObject("shooterControllerGameObject"))
+        console.log("shoot input loaded")
+        this.addGameObject(new shooterControllerDrawGameObject("shooterControllerDrawGameObject"))
 
     }
     update()

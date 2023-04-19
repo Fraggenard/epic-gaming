@@ -24,8 +24,8 @@ let keysDown = []
 document.addEventListener("keydown", keyDown)
 document.addEventListener("keyup", keyUp)
 
-document.addEventListener("mousedown", mouseDown)
-document.addEventListener("mouseup", mouseUp)
+//document.addEventListener("mousedown", mouseDown)
+//document.addEventListener("mouseup", mouseUp)
 
 let paused = false
 
@@ -40,15 +40,15 @@ function keyDown(e) {
   }
 }
 
-function mouseDown(e)
+/*function mouseDown(e)
 {
   console.log("mouseDown: " + e.clientX + " " + e.clientY)
-}
+}*/
 
-function mouseUp(e)
+/*function mouseUp(e)
 {
   console.log("mouseUp: " + e.clientX + " " + e.clientY)
-}
+}*/
 
 /*function mouseMove(e)
 {
