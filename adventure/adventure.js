@@ -234,7 +234,8 @@ class bulletGameObject extends gameObject
     start()
     {
         //this.addComponent(new bulletComponent())
-        this.addComponent(new RectangleCollider(2, 2, "orange", true))
+        this.addComponent(new RectangleCollider(2, 2, "orange", false))
+        this.addComponent(new bulletDrawComponent())
     }
 }
 
@@ -247,11 +248,13 @@ class bulletComponent extends Component
     
     bvx
     bvy
-    bulletSpeed = 10
+    bulletSpeed = 25
     lifeTime = 0
     maxlifeTime = 100
     mx
     my
+    differenceX
+    differenceY
 
     constructor(mx,my)
     {
@@ -268,20 +271,20 @@ class bulletComponent extends Component
         this.getTransform().x = this.shooter.getTransform().x
         this.getTransform().y = this.shooter.getTransform().y
 
-        let differenceX = this.mx - this.getTransform().x
-        let differenceY = this.my - this.getTransform().y
+        this.differenceX = this.mx - this.getTransform().x
+        this.differenceY = this.my - this.getTransform().y
 
-        console.log(differenceX + " " + differenceY)
+        console.log(this.differenceX + " " + this.differenceY)
 
-        let theta = Math.atan2(differenceY, differenceX)
+        let theta = Math.atan2(this.differenceY, this.differenceX)
 
         console.log(theta + "")
 
-        differenceX = this.bulletSpeed * Math.cos(theta)
-        differenceY = this.bulletSpeed * Math.sin(theta)
+        this.differenceX = this.bulletSpeed * Math.cos(theta)
+        this.differenceY = this.bulletSpeed * Math.sin(theta)
 
-        this.bvx += differenceX
-        this.bvy += differenceY
+        this.bvx += this.differenceX
+        this.bvy += this.differenceY
     }
 
     update(ctx)
@@ -295,6 +298,31 @@ class bulletComponent extends Component
             {
                 this.componentParent.destroy()
             }
+    }
+}
+
+class bulletDrawComponent extends Component
+{
+    componentName = "bulletDrawComponent"
+
+    draw(ctx)
+    {
+        let dx = this.componentParent.getComponent("bulletComponent").differenceX
+        let dy = this.componentParent.getComponent("bulletComponent").differenceY
+
+        let bx = this.componentParent.getComponent("bulletComponent").getTransform().x
+        let by = this.componentParent.getComponent("bulletComponent").getTransform().y
+
+        let colorVariance = Math.floor(Math.random() * 61) - 30
+        let orangeVariance = 160 + colorVariance
+        ctx.strokeStyle = "rgb(245, " + orangeVariance + ", 66)"
+        ctx.beginPath()
+        //ctx.strokeStyle = "red"
+        ctx.lineWidth = 2
+        ctx.moveTo(bx, by)
+        ctx.lineTo((bx - (bx * .10)), (by - (by * .10)))
+        ctx.stroke()
+        ctx.closePath()
     }
 }
 
@@ -318,6 +346,7 @@ class shooterControllerComponent extends Component
     currentReserve
     currentMag
     IS_RELOADING
+    fireRateCooldown = 10
     
     start()
     {
@@ -327,14 +356,31 @@ class shooterControllerComponent extends Component
 
     update(ctx)
     {
+        if (this.componentListeners.length == 0)
+        {
+            let shooterGO = gameObject.getObjectByName("shooterControllerDrawGameObject")
+            let shooterDraw = shooterGO.getComponent("shooterControllerDrawComponent")
+           // this.addListener(shooterDraw)
+            //console.log("listener added :3")
+        }
+        
         if (Input.mousedown && this.currentMag > 0)
         {
+            if (this.fireRateCooldown == 10)
+            {
             let worldcoords = Camera.toWorldSpace(Input.mouseX, Input.mouseY, ctx)
             let spawnedBullet = new bulletGameObject("bulletGameObject")
             spawnedBullet.addComponent(new bulletComponent(worldcoords.x, worldcoords.y))
             gameObject.instantiate(spawnedBullet)
             this.currentMag--
             console.log("pew!")
+            this.updateListeners("playerShoot")
+            this.fireRateCooldown = 0
+            }
+            else
+            {
+                this.fireRateCooldown++
+            }
         }
         else if (this.currentMag <= 0)
         {
@@ -351,6 +397,7 @@ class shooterControllerComponent extends Component
                     this.currentReserve -= this.magSize
                 }
             }
+            this.fireRateCooldown = 10
         }
     }
 }
@@ -363,6 +410,7 @@ class shooterControllerDrawGameObject extends gameObject
         ammoCounter.componentName = "ammoCounter"
         this.addComponent(ammoCounter)
         this.addComponent(new shooterControllerDrawComponent())
+        this.layer = 5
     }
 }
 
@@ -374,9 +422,17 @@ class shooterControllerDrawComponent extends Component
     mag
     ammoText
     ammoString
+    mouseWorldCoords
+    shooterGo
+    shooterCo
+    ctx
+    lineDraw = false
     
     start()
     {
+        this.shooterGo = gameObject.getObjectByName("shooterControllerGameObject")
+        this.shooterCo = this.shooterGo.getComponent("shooterControllerComponent")
+        this.shooterCo.addListener(this)
         this.ammoCon = gameObject.getObjectByName("shooterControllerGameObject")
         //this.ammoCon = this.ammoConCo.getComponent("shooterControllerComponent")
         this.ammoConCo = this.ammoCon.getComponent("shooterControllerComponent")
@@ -384,13 +440,78 @@ class shooterControllerDrawComponent extends Component
         this.ammoText.getTransform().y += 50
     }
 
-    update()
+    update(ctx)
     {
+        this.ctx = ctx
+        this.mouseWorldCoords = Camera.toWorldSpace(Input.mouseX, Input.mouseY, ctx)
         this.reserve = this.ammoConCo.currentReserve
         this.mag = this.ammoConCo.currentMag
         this.ammoString = this.mag + "/" + this.reserve
         this.ammoText.textString = this.ammoString
+
+        /*ctx.beginPath()
+        ctx.moveTo(this.shooterCo.getTransform.x, this.shooterCo.getTransform.y)
+        ctx.lineTo(this.mouseWorldCoords.x, this.mouseWorldCoords.y)
+        ctx.stroke()*/
     }
+
+    handleUpdate(component, eventName)
+    {
+        if (eventName == "playerShoot")
+        {
+            console.log("bang!!")
+
+            /*let differenceX = this.mouseWorldCoords.x - this.shooterCo.getTransform().x
+            let differenceY = this.mouseWorldCoords.y - this.shooterCo.getTransform().y
+            let colorVariance = Math.floor(Math.random() * 61) - 30
+            let orangeVariance = 160 + colorVariance
+            this.ctx.strokeStyle = "rgb(245, orangeVariance, 66)"
+            this.ctx.lineWidth = 1000
+            this.ctx.beginPath()
+            this.ctx.moveTo(this.shooterCo.getTransform().x, this.shooterCo.getTransform().y)
+            this.ctx.lineTo((this.mouseWorldCoords.x), (this.mouseWorldCoords.y))
+            this.ctx.fill()
+            this.ctx.closePath()*/
+
+            this.lineDraw = true
+        }
+    }
+
+    draw(ctx)
+    {
+        if (this.lineDraw)
+        {
+        let differenceX = this.mouseWorldCoords.x - this.shooterCo.getTransform().x
+        let differenceY = this.mouseWorldCoords.y - this.shooterCo.getTransform().y
+        let shooterGo2 = gameObject.getObjectByName("shooterGameObject")
+        let shooterCo2 = shooterGo2.getComponent("shooterComponent")
+        let colorVariance = Math.floor(Math.random() * 61) - 30
+        let orangeVariance = 160 + colorVariance
+        ctx.strokeStyle = "rgb(245, " + orangeVariance + ", 66)"
+        ctx.beginPath()
+        //ctx.strokeStyle = "red"
+        ctx.lineWidth = 2
+        ctx.moveTo(shooterCo2.getTransform().x, shooterCo2.getTransform().y)
+        ctx.lineTo((this.mouseWorldCoords.x), (this.mouseWorldCoords.y))
+        ctx.stroke()
+        ctx.closePath()
+        this.lineDraw = false
+        }
+    }
+}
+
+class enemyGameObject extends gameObject
+{
+   start()
+   {
+    this.addComponent(new enemyComponent())
+    this.addComponent(new RectangleCollider(10,10,"red",true))
+   }
+}
+
+class enemyComponent extends Component
+{
+
 }
 
 /*class ammoControllerGameObject extends gameObject

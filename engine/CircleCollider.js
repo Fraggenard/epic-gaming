@@ -46,7 +46,8 @@ class CircleCollider extends Component
       ctx.beginPath()
       ctx.arc(this.xPosition, this.yPosition, this.colliderRadius, 0, (Math.PI * 2))
       ctx.fill()
-      ctx.stroke()
+      //ctx.stroke()
+      ctx.closePath()
     }
   }
 }
