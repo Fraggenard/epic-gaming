@@ -4,45 +4,61 @@ import "/engine/engine.js"
 //let canvas = document.querySelector("#canv")
 //let ctx = canvas.getContext("2d")
 
-class StartControllerGameObject extends gameObject
+class startControllerGameObject extends gameObject
 {
     start()
     {
-        this.addComponent(new StartControllerComponent())
+        this.addComponent(new startControllerComponent())
         console.log("added start component")
         let debugAccel = new Textbox("white", "Impact", 50,"ba","left")
         debugAccel.componentName = "debugAccel"
         this.addComponent(debugAccel)
+
+        
     }
 }
 
-class StartControllerComponent extends Component
+class startControllerComponent extends Component
 {
-    update()
+    update(ctx)
     {
         let player = gameObject.getObjectByName("playerGameObject").getComponent("playerComponent").pAccel
 
         let count = sceneManager.getCurrentScene().gameObjects.length
         
         this.componentParent.getComponent("debugAccel").textString = "game objects = " + count
+
+        let zeros = Camera.GUIToScreen(ctx, 0, 0)
+        
+        console.log("0, 0 in GUI space is " + zeros.x + " ," + zeros.y + "in screen space")
+
+        //this.componentParent.getComponent("debugAccel").getTransform().y = 0
+        //this.componentParent.getComponent("debugAccel").getTransform().y = 0
     }
 }
 
-class StartDrawGameObject extends gameObject
+class startDrawGameObject extends gameObject
 {
     start()
     {
-        this.addComponent(new StartDrawComponent())
+        this.addComponent(new startDrawComponent())
         //this.addComponent(new Textbox("white", "Impact", 50, "JSQuest", "center"))
         console.log("added draw component")
     }
 }
 
-class StartDrawComponent extends Component
+class startDrawComponent extends Component
 {
     draw(ctx)
     {
+        let screenZeros = Camera.getZeros(ctx)
         
+        let screenSpaceCoords = Camera.screenToWorld(ctx, screenZeros.zeroX + 20, screenZeros.zeroY + 20)
+
+        let scgo = gameObject.getObjectByName("startControllerGameObject")
+
+        scgo.getComponent("debugAccel").getTransform().x = screenSpaceCoords.x
+        scgo.getComponent("debugAccel").getTransform().y = screenSpaceCoords.y
         
         /*let xo = sceneManager.getCurrentScene().xOriginPoint
         let yo = sceneManager.getCurrentScene().yOriginPoint
@@ -61,6 +77,26 @@ class StartDrawComponent extends Component
         ctx.font = "30px Arial"
         ctx.fillText("Press Any Key to Start", xw, yh + 60)
         console.log("im drawing")*/
+    }
+}
+
+class debugGUIObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new debugGUIComponent())
+    }
+}
+
+class debugGUIComponent extends Component
+{
+    drawGUI(ctx)
+    {
+        let zeros = Camera.getZeros(ctx)
+        
+        let coords = Camera.screenToGUI(ctx, zeros.zeroX, zeros.zeroY)
+
+        ctx.fillRect(coords.x, coords.y, 50, 50)
     }
 }
 
@@ -200,8 +236,15 @@ class shooterComponent extends Component
         this.mx = Input.mouseX
         this.my = Input.mouseY
 
-        let worldSpaceValues = Camera.toWorldSpace(this.mx,this.my,ctx)
+        let worldSpaceValues = Camera.screenToWorld(ctx,this.mx,this.my)
 
+        //let logicalSpaceValues = Camera.toLogicalScreenSpace(this.mx, this.my, ctx)
+
+        //this.mx = logicalSpaceValues.x
+        //this.my = logicalSpaceValues.y
+
+        
+        
         this.mx = worldSpaceValues.x
         this.my = worldSpaceValues.y
 
@@ -310,6 +353,11 @@ class bulletDrawComponent extends Component
         let dx = this.componentParent.getComponent("bulletComponent").differenceX
         let dy = this.componentParent.getComponent("bulletComponent").differenceY
 
+        let theta = Math.atan2(dy, dx)
+
+        //dx = Math.cos(theta)
+        //dy = Math.sin(theta)
+
         let bx = this.componentParent.getComponent("bulletComponent").getTransform().x
         let by = this.componentParent.getComponent("bulletComponent").getTransform().y
 
@@ -320,7 +368,7 @@ class bulletDrawComponent extends Component
         //ctx.strokeStyle = "red"
         ctx.lineWidth = 2
         ctx.moveTo(bx, by)
-        ctx.lineTo((bx - (bx * .10)), (by - (by * .10)))
+        ctx.lineTo((bx - (dx)), (by - (dy)))
         ctx.stroke()
         ctx.closePath()
     }
@@ -368,7 +416,7 @@ class shooterControllerComponent extends Component
         {
             if (this.fireRateCooldown == 10)
             {
-            let worldcoords = Camera.toWorldSpace(Input.mouseX, Input.mouseY, ctx)
+            let worldcoords = Camera.screenToWorld(ctx, Input.mouseX, Input.mouseY)
             let spawnedBullet = new bulletGameObject("bulletGameObject")
             spawnedBullet.addComponent(new bulletComponent(worldcoords.x, worldcoords.y))
             gameObject.instantiate(spawnedBullet)
@@ -437,18 +485,19 @@ class shooterControllerDrawComponent extends Component
         //this.ammoCon = this.ammoConCo.getComponent("shooterControllerComponent")
         this.ammoConCo = this.ammoCon.getComponent("shooterControllerComponent")
         this.ammoText = this.componentParent.getComponent("ammoCounter")
-        this.ammoText.getTransform().y += 50
+        //this.ammoText.getTransform().y += 50
     }
 
     update(ctx)
     {
-        this.ctx = ctx
-        this.mouseWorldCoords = Camera.toWorldSpace(Input.mouseX, Input.mouseY, ctx)
+        //this.ctx = ctx
+        this.mouseWorldCoords = Camera.GUIToWorld(ctx, Input.mouseX, Input.mouseY)
         this.reserve = this.ammoConCo.currentReserve
         this.mag = this.ammoConCo.currentMag
         this.ammoString = this.mag + "/" + this.reserve
         this.ammoText.textString = this.ammoString
 
+        
         /*ctx.beginPath()
         ctx.moveTo(this.shooterCo.getTransform.x, this.shooterCo.getTransform.y)
         ctx.lineTo(this.mouseWorldCoords.x, this.mouseWorldCoords.y)
@@ -473,7 +522,7 @@ class shooterControllerDrawComponent extends Component
             this.ctx.fill()
             this.ctx.closePath()*/
 
-            this.lineDraw = true
+            //this.lineDraw = true
         }
     }
 
@@ -497,6 +546,17 @@ class shooterControllerDrawComponent extends Component
         ctx.closePath()
         this.lineDraw = false
         }
+    }
+
+    drawGUI(ctx)
+    {
+        let zeros = Camera.getZeros(ctx)
+        
+        let worldSpaceCoords = Camera.screenToWorld(ctx, zeros.zeroX + ctx.canvas.width - 50, zeros.zeroY + ctx.canvas.height - 20)
+        
+        this.ammoText.getTransform().x = worldSpaceCoords.x
+        this.ammoText.getTransform().y = 0
+
     }
 }
 
@@ -594,9 +654,9 @@ class TitleScene extends sceneContainer
     start()
     {
         //this.gameObjects = []
-        this.addGameObject(new StartControllerGameObject())
+        this.addGameObject(new startControllerGameObject("startControllerGameObject"))
         console.log("added controller object")
-        this.addGameObject(new StartDrawGameObject())
+        this.addGameObject(new startDrawGameObject())
         console.log("added draw object")
         this.addGameObject(new playerGameObject("playerGameObject"))
         console.log("added the player")
@@ -607,6 +667,7 @@ class TitleScene extends sceneContainer
         this.addGameObject(new shooterControllerGameObject("shooterControllerGameObject"))
         console.log("shoot input loaded")
         this.addGameObject(new shooterControllerDrawGameObject("shooterControllerDrawGameObject"))
+        this.addGameObject(new debugGUIObject("debugGUIObject"))
 
     }
     update()
