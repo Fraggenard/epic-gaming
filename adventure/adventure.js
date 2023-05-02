@@ -9,31 +9,42 @@ class startControllerGameObject extends gameObject
     start()
     {
         this.addComponent(new startControllerComponent())
-        console.log("added start component")
+        //console.log("added start component")
         let debugAccel = new Textbox("white", "Impact", 50,"ba","left")
         debugAccel.componentName = "debugAccel"
         this.addComponent(debugAccel)
-
-        
     }
 }
 
 class startControllerComponent extends Component
 {
+    componentName = "startControllerComponent"
+    
+    start()
+    {
+        this.componentParent.getComponent("debugAccel").textString = "None"
+    }
+    
     update(ctx)
     {
-        let player = gameObject.getObjectByName("playerGameObject").getComponent("playerComponent").pAccel
+        //let player = gameObject.getObjectByName("playerGameObject").getComponent("playerComponent").pAccel
 
         let count = sceneManager.getCurrentScene().gameObjects.length
-        
-        this.componentParent.getComponent("debugAccel").textString = "game objects = " + count
 
         let zeros = Camera.GUIToScreen(ctx, 0, 0)
         
-        console.log("0, 0 in GUI space is " + zeros.x + " ," + zeros.y + "in screen space")
+        //console.log("0, 0 in GUI space is " + zeros.x + " ," + zeros.y + "in screen space")
 
         //this.componentParent.getComponent("debugAccel").getTransform().y = 0
         //this.componentParent.getComponent("debugAccel").getTransform().y = 0
+    }
+
+    handleUpdate(component, eventName)
+    {
+        if (eventName == "weaponPickup")
+        {
+            this.componentParent.getComponent("debugAccel").textString = component.containedWeapon
+        }
     }
 }
 
@@ -43,19 +54,19 @@ class startDrawGameObject extends gameObject
     {
         this.addComponent(new startDrawComponent())
         //this.addComponent(new Textbox("white", "Impact", 50, "JSQuest", "center"))
-        console.log("added draw component")
+        //console.log("added draw component")
     }
 }
 
 class startDrawComponent extends Component
 {
     draw(ctx)
-    {
-        let screenZeros = Camera.getZeros(ctx)
-        
-        let screenSpaceCoords = Camera.screenToWorld(ctx, screenZeros.zeroX + 20, screenZeros.zeroY + 20)
-
+    {   
         let scgo = gameObject.getObjectByName("startControllerGameObject")
+        
+        let screenZeros = Camera.getZeros(ctx)
+
+        let screenSpaceCoords = Camera.screenToWorld(ctx, screenZeros.zeroX + 40, screenZeros.zeroY + 40)
 
         scgo.getComponent("debugAccel").getTransform().x = screenSpaceCoords.x
         scgo.getComponent("debugAccel").getTransform().y = screenSpaceCoords.y
@@ -90,13 +101,20 @@ class debugGUIObject extends gameObject
 
 class debugGUIComponent extends Component
 {
-    drawGUI(ctx)
+    start(ctx)
     {
         let zeros = Camera.getZeros(ctx)
         
         let coords = Camera.screenToGUI(ctx, zeros.zeroX, zeros.zeroY)
+    }
+    
+    drawScreen(ctx)
+    {
+        //console.log("screen draw")
 
-        ctx.fillRect(coords.x, coords.y, 50, 50)
+        ctx.fillStyle = "yellow"
+
+        ctx.fillRect(0, 0, 50, 50)
     }
 }
 
@@ -114,13 +132,13 @@ class playerComponent extends Component
 {
     componentName = "playerComponent"
     
-    pvx
-    pvy
+    pvx = 0
+    pvy = 0
     pAccel = 0
-    playerWidth
-    playerHeight
-    IS_MOVING
-    IS_ATTACKING
+    playerWidth = 0
+    playerHeight = 0
+    IS_MOVING = false
+    IS_ATTACKING = false
     
     start()
     {
@@ -131,7 +149,7 @@ class playerComponent extends Component
         this.playerHeight = this.componentParent.getComponent("RectangleCollider").colliderHeight
         this.IS_MOVING = false
         this.IS_ATTACKING = false
-        console.log("started player")
+        //console.log("started player")
     }
 
     update()
@@ -147,7 +165,7 @@ class playerComponent extends Component
         {
             this.up = -1
             this.keyPressed = true
-            console.log("W")
+            //console.log("W")
         }
 
         if (keysDown["a"])
@@ -219,13 +237,15 @@ class shooterComponent extends Component
     maxReach = 25
     mx
     my
-    player = gameObject.getObjectByName("playerGameObject")
+    player   
     
     start()
     {
         //this.getTransform().x = this.player.Transform.x + 5
         //this.getTransform().y = this.player.Transform.y + 5
-        console.log("started schutplayer")
+        //console.log("started schutplayer")
+
+        this.player = gameObject.getObjectByName("playerGameObject")
     }
 
     update(ctx)
@@ -248,7 +268,7 @@ class shooterComponent extends Component
         this.mx = worldSpaceValues.x
         this.my = worldSpaceValues.y
 
-        console.log("X: " + this.mx + " Y: " + this.my)
+        //console.log("X: " + this.mx + " Y: " + this.my)
 
         let differenceX = this.mx - this.getTransform().x
         let differenceY = this.my - this.getTransform().y
@@ -264,8 +284,15 @@ class shooterComponent extends Component
             scaledY = this.maxReach * Math.sin(theta)
        // }
 
-        this.getTransform().x += (scaledX + (this.player.getComponent("playerComponent").playerWidth / 2))
-        this.getTransform().y += (scaledY + (this.player.getComponent("playerComponent").playerHeight / 2))
+       //console.log(this.player.getComponent("playerComponent").playerWidth)
+        
+       let pc = this.player.getComponent("playerComponent")
+       
+       /*this.getTransform().x += (scaledX + (this.player.getComponent("playerComponent").playerWidth / 2))
+        this.getTransform().y += (scaledY + (this.player.getComponent("playerComponent").playerHeight / 2))*/
+
+        this.getTransform().x += (scaledX + (pc.playerWidth / 2))
+        this.getTransform().y += (scaledY + (pc.playerHeight / 2))
 
         //console.log(this.player.getComponent("playerComponent").playerWidth)
 
@@ -298,6 +325,7 @@ class bulletComponent extends Component
     my
     differenceX
     differenceY
+    MADE_COLLISION = false
 
     constructor(mx,my)
     {
@@ -307,7 +335,7 @@ class bulletComponent extends Component
     }
     
     start()
-    {
+    {   
         this.bvx = 0
         this.bvy = 0
         
@@ -317,11 +345,11 @@ class bulletComponent extends Component
         this.differenceX = this.mx - this.getTransform().x
         this.differenceY = this.my - this.getTransform().y
 
-        console.log(this.differenceX + " " + this.differenceY)
+        //console.log(this.differenceX + " " + this.differenceY)
 
         let theta = Math.atan2(this.differenceY, this.differenceX)
 
-        console.log(theta + "")
+        //console.log(theta + "")
 
         this.differenceX = this.bulletSpeed * Math.cos(theta)
         this.differenceY = this.bulletSpeed * Math.sin(theta)
@@ -332,8 +360,33 @@ class bulletComponent extends Component
 
     update(ctx)
     {   
-            this.getTransform().x += this.bvx
+        if (this.componentListeners.length == 0)
+        {
+            let ecgo = gameObject.getObjectByName("enemyControllerGameObject")
+            let ecc = ecgo.getComponent("enemyControllerComponent")
+            this.addListener(ecc)
+            ecc.addListener(this)
+        }   
+        
+        this.getTransform().x += this.bvx
             this.getTransform().y += this.bvy
+
+            let bullet = this.componentParent.getComponent("RectangleCollider")
+
+            for (let gameObject of sceneManager.getCurrentScene().gameObjects)
+            {
+                for (let component of gameObject.components)
+                {
+                    if (component.componentName == "RectangleCollider")
+                    {
+                        if (bullet.isColliding(component))
+                        {
+                            this.updateListeners("bulletContact")
+                            console.log("bullet contact event")
+                        }
+                    }
+                }
+            }
 
             this.lifeTime++
             
@@ -341,6 +394,23 @@ class bulletComponent extends Component
             {
                 this.componentParent.destroy()
             }
+    }
+
+    bulletCollision(component)
+    {
+        
+    }
+
+    handleUpdate(component, eventName)
+    {
+        if (eventName == "bulletHit")
+        {
+            if (this.MADE_COLLISION)
+            {
+            this.componentParent.destroy()
+            }
+        }
+        
     }
 }
 
@@ -388,22 +458,58 @@ class shooterControllerComponent extends Component
 
     currentScene = sceneManager.getCurrentScene()
 
-    currentWeapon
-    reserveSize = 500
-    magSize = 50
-    currentReserve
-    currentMag
-    IS_RELOADING
-    fireRateCooldown = 10
+    currentWeapon = "None"
+    reserveSize = 0
+    magSize = 0
+    currentReserve = 0
+    currentMag = 0
+    IS_RELOADING = false
+    fireRateCooldown = 0
+    reloadTime = 0
+    currentReloadTime = 0
+    currentFireRateCooldown = 0
     
     start()
     {
+        let wcgo = gameObject.getObjectByName("weaponControllerGameObject")
+
+        let wcc = wcgo.getComponent("weaponControllerComponent")
+        
+        this.currentWeapon = wcc.currentWeapon
+        this.reserveSize = wcc.reserveSize
+        this.magSize = wcc.magSize
+        this.IS_RELOADING = wcc.IS_RELOADING
+        this.fireRateCooldown = wcc.fireRateCooldown
+        this.reloadTime = wcc.reloadTime
+        
         this.currentReserve = this.reserveSize
         this.currentMag = this.magSize
+
+        this.currentFireRateCooldown = this.fireRateCooldown
     }
 
     update(ctx)
     {
+        if (this.componentListeners.length == 0)
+        {
+            let scdgo = gameObject.getObjectByName("shooterControllerDrawGameObject")
+
+            let scdc = scdgo.getComponent("shooterControllerDrawComponent")
+
+            this.addListener(scdc)
+        }
+        
+        let wcgo = gameObject.getObjectByName("weaponControllerGameObject")
+
+        let wcc = wcgo.getComponent("weaponControllerComponent")
+        
+        this.currentWeapon = wcc.currentWeapon
+        this.reserveSize = wcc.reserveSize
+        this.magSize = wcc.magSize
+        //this.IS_RELOADING = wcc.IS_RELOADING
+        this.fireRateCooldown = wcc.fireRateCooldown
+        this.reloadTime = wcc.reloadTime
+        
         if (this.componentListeners.length == 0)
         {
             let shooterGO = gameObject.getObjectByName("shooterControllerDrawGameObject")
@@ -412,40 +518,96 @@ class shooterControllerComponent extends Component
             //console.log("listener added :3")
         }
         
+        if(this.IS_RELOADING == false)
+        {
         if (Input.mousedown && this.currentMag > 0)
         {
-            if (this.fireRateCooldown == 10)
+            if (this.currentFireRateCooldown == this.fireRateCooldown)
             {
             let worldcoords = Camera.screenToWorld(ctx, Input.mouseX, Input.mouseY)
             let spawnedBullet = new bulletGameObject("bulletGameObject")
             spawnedBullet.addComponent(new bulletComponent(worldcoords.x, worldcoords.y))
             gameObject.instantiate(spawnedBullet)
             this.currentMag--
-            console.log("pew!")
-            this.updateListeners("playerShoot")
-            this.fireRateCooldown = 0
+            //console.log("pew!")
+            //this.updateListeners("playerShoot")
+            this.currentFireRateCooldown = 0
             }
             else
             {
-                this.fireRateCooldown++
+                if (this.currentFireRateCooldown < this.fireRateCooldown)
+                {
+                this.currentFireRateCooldown++
+                }
             }
         }
-        else if (this.currentMag <= 0)
+        else 
+        {
+            if (this.currentFireRateCooldown < this.fireRateCooldown)
+            {
+            this.currentFireRateCooldown++
+            }
+            if (this.currentMag <= 0)
+            {
+                if (this.currentWeapon != "None")
+                {
+                this.reload()
+                }
+            }
+        }
+    }
+    else
+    {
+        if (this.currentReloadTime > 0)
+        {
+            this.currentReloadTime--
+        }
+        else
+        {
+            this.currentReloadTime = 0
+            this.IS_RELOADING = false
+            this.updateListeners("doneReloading")
+        }
+    }
+    }
+
+
+    reload()
+    {
+        this.updateListeners("reloading")
+        this.IS_RELOADING = true
+        this.currentReloadTime = this.reloadTime
+        if (this.currentMag < this.magSize)
         {
             if (this.currentReserve > 0)
             {
-                if (this.currentReserve < this.magSize)
+                let refillAmount = (this.magSize - this.currentMag)
+                if (this.currentReserve >= refillAmount)
+                {
+                    this.currentReserve -= refillAmount
+                    this.currentMag += refillAmount
+                }
+                else
                 {
                     this.currentMag += this.currentReserve
                     this.currentReserve -= this.currentReserve
                 }
-                else
-                {
-                    this.currentMag += this.magSize
-                    this.currentReserve -= this.magSize
-                }
             }
-            this.fireRateCooldown = 10
+        }
+            this.currentFireRateCooldown = this.fireRateCooldown
+    }
+
+    handleUpdate(component, eventName)
+    {
+        if (eventName == "weaponPickup")
+        {
+            let wcgo = gameObject.getObjectByName("weaponControllerGameObject")
+
+            let wcc = wcgo.getComponent("weaponControllerComponent")
+            
+            this.currentReserve = wcc.reserveSize
+            this.currentMag = wcc.magSize
+            this.currentFireRateCooldown = wcc.fireRateCooldown
         }
     }
 }
@@ -466,8 +628,8 @@ class shooterControllerDrawComponent extends Component
 {
     ammoCon
     ammoConCo
-    reserve
-    mag
+    reserve = 0
+    mag = 0
     ammoText
     ammoString
     mouseWorldCoords
@@ -475,6 +637,7 @@ class shooterControllerDrawComponent extends Component
     shooterCo
     ctx
     lineDraw = false
+    IS_RELOADING = false
     
     start()
     {
@@ -494,7 +657,15 @@ class shooterControllerDrawComponent extends Component
         this.mouseWorldCoords = Camera.GUIToWorld(ctx, Input.mouseX, Input.mouseY)
         this.reserve = this.ammoConCo.currentReserve
         this.mag = this.ammoConCo.currentMag
+
+        if (this.IS_RELOADING == false)
+        {
         this.ammoString = this.mag + "/" + this.reserve
+        }
+        else
+        {
+            this.ammoString = "Reloading!"
+        }
         this.ammoText.textString = this.ammoString
 
         
@@ -506,9 +677,9 @@ class shooterControllerDrawComponent extends Component
 
     handleUpdate(component, eventName)
     {
-        if (eventName == "playerShoot")
+        if (eventName == "reloading")
         {
-            console.log("bang!!")
+            this.IS_RELOADING = true
 
             /*let differenceX = this.mouseWorldCoords.x - this.shooterCo.getTransform().x
             let differenceY = this.mouseWorldCoords.y - this.shooterCo.getTransform().y
@@ -523,6 +694,11 @@ class shooterControllerDrawComponent extends Component
             this.ctx.closePath()*/
 
             //this.lineDraw = true
+        }
+
+        if (eventName == "doneReloading")
+        {
+            this.IS_RELOADING = false
         }
     }
 
@@ -548,14 +724,37 @@ class shooterControllerDrawComponent extends Component
         }
     }
 
-    drawGUI(ctx)
+    draw(ctx)
     {
         let zeros = Camera.getZeros(ctx)
+
+        let yHeight = 0
+
+        let xWidth = 0
+
+        let textWidth = ctx.measureText(this.ammoString).width
+
+        let textHeight = ctx.measureText(this.ammoString).actualBoundingBoxAscent
+
+        let currentAspectRatio = ctx.canvas.width / ctx.canvas.height
+
+        if (EngineGlobals.requestedAspectRatio > currentAspectRatio) //letterboxes top and bottom
+        {
+            yHeight = ctx.canvas.width/EngineGlobals.requestedAspectRatio - (textHeight * 3)
+
+            xWidth = ctx.canvas.width - (textWidth * 3)
+        }
+        else //letterboxes on sides
+        {
+            yHeight = ctx.canvas.height - (textHeight * 3)
+
+            xWidth = ctx.canvas.height * EngineGlobals.requestedAspectRatio - (textWidth * 3)
+        }
         
-        let worldSpaceCoords = Camera.screenToWorld(ctx, zeros.zeroX + ctx.canvas.width - 50, zeros.zeroY + ctx.canvas.height - 20)
+        let worldSpaceCoords = Camera.screenToWorld(ctx, zeros.zeroX + xWidth, zeros.zeroY + yHeight)
         
         this.ammoText.getTransform().x = worldSpaceCoords.x
-        this.ammoText.getTransform().y = 0
+        this.ammoText.getTransform().y = worldSpaceCoords.y
 
     }
 }
@@ -571,7 +770,234 @@ class enemyGameObject extends gameObject
 
 class enemyComponent extends Component
 {
+    componentName = "enemyComponent"
+    
+    evx
+    evy
+    eAccel = 0
+    enemyWidth
+    enemyHeight
+    enemyHealth
+    IS_MOVING
+    IS_ATTACKING
+    IS_DEAD
+    
+    start(ctx)
+    {
+       
+        
+        let collider = this.componentParent.getComponent("RectangleCollider")
+        collider.colliderColor = "red"
+        this.evx = 0
+        this.evy = 0
+        this.eAccel = 0
+        this.enemyWidth = this.componentParent.getComponent("RectangleCollider").colliderWidth
+        this.enemyHeight = this.componentParent.getComponent("RectangleCollider").colliderHeight
+        this.enemyHealth = 100
+        this.IS_MOVING = false
+        this.IS_ATTACKING = false
+        this.IS_DEAD = false
+        //console.log("started enemy")
+        this.getTransform().x = 100
+        this.getTransform().y = 120
+    }
 
+    update(ctx)
+    {
+        if (this.componentListeners.length == 0)
+        {
+            let ecgo = gameObject.getObjectByName("enemyControllerGameObject")
+            let ecc = ecgo.getComponent("enemyControllerComponent")
+            this.addListener(ecc)
+            ecc.addListener(this)
+        }
+        
+        if (this.IS_DEAD == false)
+        {
+
+        }
+        else
+        {
+            let collider = this.componentParent.getComponent("RectangleCollider")
+            collider.colliderColor = "black"
+        }
+    }
+
+    handleUpdate(component, eventName)
+    {
+        if (eventName == "bulletCheck")
+        {
+            for (let gameObject of sceneManager.getCurrentScene().gameObjects)
+            {
+                if (gameObject.gameObjectName == "bulletGameObject")
+                {
+                    console.log("I recognize the bullet!")
+                    
+                    let bulletCollider = gameObject.getComponent("RectangleCollider")
+
+                    let bulletComponent = gameObject.getComponent("bulletComponent")
+
+                    let enemyCollider = this.componentParent.getComponent("RectangleCollider")
+
+                    console.log(enemyCollider.isColliding(bulletCollider))
+
+                    if (enemyCollider.isColliding(bulletCollider))
+                    {
+                        this.IS_DEAD = true
+                        bulletComponent.MADE_COLLISION = true
+                        this.updateListeners("bulletHit")
+                        console.log("enemy shot dead")
+                    }
+                }
+            }
+        }
+    }
+}
+
+class enemyControllerGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new enemyControllerComponent())
+    }
+}
+
+class enemyControllerComponent extends Component
+{
+    componentName = "enemyControllerComponent"
+    
+    start()
+    {
+
+    }
+
+    update()
+    {
+        
+    }
+
+    handleUpdate(component, eventName)
+        {
+            if (eventName == "bulletContact")
+            {
+                this.updateListeners("bulletCheck")
+                console.log("bullet check event")
+            }
+
+            if (eventName == "bulletHit")
+            {
+                this.updateListeners("bulletHit")
+                console.log("bullet hit event")
+            }
+        }
+}
+
+class weaponControllerGameObject extends gameObject
+{
+    start()
+    {
+    this.addComponent(new weaponControllerComponent())
+    }
+}
+
+class weaponControllerComponent extends Component
+{
+    componentName = "weaponControllerComponent"
+    
+    currentWeapon = "None"
+    reserveSize = 0
+    magSize = 0
+    IS_RELOADING = false
+    fireRateCooldown = 0
+    reloadTime = 0
+
+    start()
+    {
+        this.currentWeapon = "None"
+        this.reserveSize = 0
+        this.magSize = 0
+        this.IS_RELOADING = false
+        this.fireRateCooldown = 0
+        this.reloadTime = 0
+    }
+
+    handleUpdate(component, eventName)
+    {
+        if(eventName == "weaponPickup")
+        {
+            let weaponName = component.containedWeapon
+
+            switch (weaponName)
+            {
+                case "None":
+                    this.currentWeapon = "None"
+                    this.reserveSize = 0
+                    this.magSize = 0
+                    this.IS_RELOADING = false
+                    this.fireRateCooldown = 0
+                    this.reloadTime = 0
+                break;
+                case "Rifle":
+                    this.currentWeapon = "Rifle"
+                    this.reserveSize = 90
+                    this.magSize = 30
+                    this.IS_RELOADING = false
+                    this.fireRateCooldown = 10
+                    this.reloadTime = 120
+                break;
+                default:
+
+                break;
+            }
+        }
+    }
+}
+
+class weaponPickupGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new weaponPickupComponent())
+        this.addComponent(new RectangleCollider(5,5,"black",true))
+    }
+}
+
+class weaponPickupComponent extends Component
+{
+    containedWeapon = "Rifle"
+    
+    /*constructor(weapon)
+    {
+        this.containedWeapon = weapon
+    }*/
+    
+    start()
+    {
+        let wcgo = gameObject.getObjectByName("weaponControllerGameObject")
+        let wcc = wcgo.getComponent("weaponControllerComponent")
+        this.addListener(wcc)
+        let scgo = gameObject.getObjectByName("startControllerGameObject")
+        let sctb = scgo.getComponent("startControllerComponent")
+        this.addListener(sctb)
+        let shcgo = gameObject.getObjectByName("shooterControllerGameObject")
+        let shcc = shcgo.getComponent("shooterControllerComponent")
+        this.addListener(shcc)
+        this.getTransform().x = -77
+        this.getTransform().y = -77
+    }
+
+    update()
+    {
+        let pgo = gameObject.getObjectByName("playerGameObject")
+        let pc = pgo.getComponent("RectangleCollider")
+        let wpc = this.componentParent.getComponent("RectangleCollider")
+        
+        if (wpc.isColliding(pc))
+        {
+            this.updateListeners("weaponPickup")
+            this.componentParent.destroy()
+        }
+    }
 }
 
 /*class ammoControllerGameObject extends gameObject
@@ -655,20 +1081,23 @@ class TitleScene extends sceneContainer
     {
         //this.gameObjects = []
         this.addGameObject(new startControllerGameObject("startControllerGameObject"))
-        console.log("added controller object")
+        //console.log("added controller object")
         this.addGameObject(new startDrawGameObject())
-        console.log("added draw object")
+        //console.log("added draw object")
         this.addGameObject(new playerGameObject("playerGameObject"))
-        console.log("added the player")
+        //console.log("added the player")
         this.addGameObject(new cameraTrackerGameObject("cameraTrackerGameObject"))
-        console.log("camera tracking enabled")
+        //console.log("camera tracking enabled")
         this.addGameObject(new shooterGameObject("shooterGameObject"))
-        console.log("shooter added to scene")
+        //console.log("shooter added to scene")
         this.addGameObject(new shooterControllerGameObject("shooterControllerGameObject"))
-        console.log("shoot input loaded")
+        //console.log("shoot input loaded")
         this.addGameObject(new shooterControllerDrawGameObject("shooterControllerDrawGameObject"))
         this.addGameObject(new debugGUIObject("debugGUIObject"))
-
+        this.addGameObject(new weaponControllerGameObject("weaponControllerGameObject"))
+        this.addGameObject(new weaponPickupGameObject("weaponPickupGameObject"))
+        this.addGameObject(new enemyGameObject("enemyGameObject"))
+        this.addGameObject(new enemyControllerGameObject("enemyControllerGameObject"))
     }
     update()
     {
@@ -718,4 +1147,4 @@ class DeathScene extends sceneContainer
 
 let titleScene = new TitleScene("purple")
 sceneManager.addScene(titleScene)
-console.log("added title scene")
+//console.log("added title scene")

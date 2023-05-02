@@ -33,7 +33,9 @@ class RectangleCollider extends Component
     this.colliderHeight *= this.getTransform().scaleY
   }
 
-  isColliding(otherComponent) {
+
+  //might be terrible
+  /*isColliding(otherComponent) {
     if (this.xPosition + this.colliderWidth >= otherComponent.xPosition && this.xPosition + this.colliderWidth <= otherComponent.xPosition + otherComponent.colliderWidth
       && this.yPosition + this.colliderHeight >= otherComponent.yPosition && this.yPosition + this.colliderHeight <= otherComponent.yPosition + otherComponent.colliderHeight) {
       return true
@@ -41,6 +43,19 @@ class RectangleCollider extends Component
     else {
       return false
     }
+  }*/
+
+  isColliding(otherComponent)
+  {
+    if (this.xPosition + this.colliderWidth > otherComponent.xPosition && this.xPosition < otherComponent.xPosition + otherComponent.colliderWidth
+      && this.yPosition + this.colliderHeight > otherComponent.yPosition && this.yPosition < otherComponent.yPosition + otherComponent.colliderHeight)
+      {
+        return true
+      }
+      else
+      {
+        return false
+      }
   }
 
   draw(ctx) {

@@ -231,6 +231,29 @@ for (let i = min; i <= max; i++)
 }
 
   ctx.restore()
+
+  ctx.save()
+  min = sceneManager.getCurrentScene().gameObjects.filter(go=>go.components.some(c=>c.drawScreen)).map(go => go.layer).reduce((previous, current)=>Math.min(previous, current),0)
+
+  max = sceneManager.getCurrentScene().gameObjects.filter(go=>go.components.some(c=>c.drawScreen)).map(go => go.layer).reduce((previous, current)=>Math.max(previous, current),0)
+
+  ctx.save()
+  for(let i = min; i <= max; i++)
+  {
+    let gameObjects = sceneManager.getCurrentScene().gameObjects.filter(go=>go.layer==i)
+
+    for(let gameObject of gameObjects)
+    {
+      for (let component of gameObject.components)
+      {
+        if (component.drawScreen)
+        {
+          component.drawScreen(ctx)
+        }
+      }
+    }
+  }
+ctx.restore()
 }
 
 function start(title) {
