@@ -2,6 +2,8 @@ import "./Component.js"
 import "./GameObject.js"
 import "./RectangleCollider.js"
 import "./CircleCollider.js"
+import "./RectangleColliderDraw.js"
+import "./CircleColliderDraw.js"
 import "./SceneContainer.js"
 import "./SceneManager.js"
 import "./Transform.js"
@@ -24,9 +26,6 @@ let keysDown = []
 document.addEventListener("keydown", keyDown)
 document.addEventListener("keyup", keyUp)
 
-//document.addEventListener("mousedown", mouseDown)
-//document.addEventListener("mouseup", mouseUp)
-
 let paused = false
 
 function keyUp(e) {
@@ -39,27 +38,6 @@ function keyDown(e) {
     paused = !paused
   }
 }
-
-/*function mouseDown(e)
-{
-  console.log("mouseDown: " + e.clientX + " " + e.clientY)
-}*/
-
-/*function mouseUp(e)
-{
-  console.log("mouseUp: " + e.clientX + " " + e.clientY)
-}*/
-
-/*function mouseMove(e)
-{
-  //this.mouseX = e.clientX
-  //this.mouseY = e.clientY
-
-  let rect = canvas.getBoundingClientRect()
-  this.mouseX = e.clientX - rect.left
-  this.mouseY = e.clientY - rect.top
-  console.log("mouseMove: " + this.mouseX + " " + this.mouseY)
-}*/
 
 function engineUpdate() {
   if (paused) {
@@ -131,9 +109,6 @@ for (let gameObject of sceneManager.getCurrentScene().gameObjects)
 }
 }
 
-//let aspectRatio = 16/9
-//let logicalWidth = 500
-
 function engineDraw() {
   canvas.width = window.innerWidth
   canvas.height = window.innerHeight
@@ -142,25 +117,20 @@ function engineDraw() {
   ctx.fillRect(0,0,canvas.width, canvas.height)
 
   let currentAspectRatio = canvas.width / canvas.height
-  let offsetX = 0
-  let offsetY = 0
   let actualWidth = canvas.width
   if (EngineGlobals.requestedAspectRatio > currentAspectRatio)
   {
     let desiredHeight = canvas.width/EngineGlobals.requestedAspectRatio 
     let amount = (canvas.height - desiredHeight) / 2
-    //offsetY = amount
   }
   else
   {
     let desiredWidth = canvas.height * EngineGlobals.requestedAspectRatio
     let amount = (canvas.width - desiredWidth) / 2
-    //offsetX = amount
     actualWidth -= 2 * amount
   }
 
   ctx.save()
-  //ctx.translate(offsetX, offsetY)
   let logicalScale = actualWidth / EngineGlobals.logicalWidth
   ctx.translate(ctx.canvas.width/2, ctx.canvas.height/2)
   ctx.scale(logicalScale, logicalScale)
@@ -203,12 +173,8 @@ for (let i = min; i <= max; i++)
     ctx.fillRect(0,0,amount, canvas.height)
     ctx.fillRect(canvas.width - amount,0,amount, canvas.height)
   }
-
-//min = sceneManager.getCurrentScene().gameObjects.filter(go=>go.components.some(c=>c.drawGUI)).map(go => go.layer).reduce((previous,current)=>Math.min(previous,current))
-//max = sceneManager.getCurrentScene().gameObjects.filter(go=>go.components.some(c=>c.drawGUI)).map(go => go.layer).reduce((previous,current)=>Math.max(previous,current))
   
 ctx.save()
-//ctx.translate(offsetX, offsetY)
 logicalScale = actualWidth / EngineGlobals.logicalWidth
 ctx.translate(ctx.canvas.width/2, ctx.canvas.height/2)
 ctx.scale(logicalScale, logicalScale)

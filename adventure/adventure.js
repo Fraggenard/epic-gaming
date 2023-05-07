@@ -125,6 +125,7 @@ class playerGameObject extends gameObject
         this.addComponent(new playerComponent())
         //this.addComponent(new playerDrawComponent())
         this.addComponent(new RectangleCollider(10,10,"yellow",true))
+        this.addComponent(new RectangleColliderDraw())
     }
 }
 
@@ -226,6 +227,7 @@ class shooterGameObject extends gameObject
     {
         this.addComponent(new shooterComponent())
         this.addComponent(new CircleCollider(2, "green", true))
+        this.addComponent(new CircleColliderDraw())
     }
 }
 
@@ -320,7 +322,7 @@ class bulletComponent extends Component
     bvy
     bulletSpeed = 25
     lifeTime = 0
-    maxlifeTime = 100
+    maxlifeTime = 30
     mx
     my
     differenceX
@@ -379,10 +381,14 @@ class bulletComponent extends Component
                 {
                     if (component.componentName == "RectangleCollider")
                     {
-                        if (bullet.isColliding(component))
+                        if (this.bulletCollision(this, component))
                         {
                             this.updateListeners("bulletContact")
                             console.log("bullet contact event")
+                        }
+                        else
+                        {
+                            console.log("nothing :(")
                         }
                     }
                 }
@@ -396,9 +402,153 @@ class bulletComponent extends Component
             }
     }
 
-    bulletCollision(component)
+    //portions from https://www.topcoder.com/thrive/articles/Geometry%20Concepts%20part%202:%20%20Line%20Intersection%20and%20its%20Applications
+    bulletCollision(bulletComponent, rectangleComponent)
     {
-        
+        let bulletX2 = bulletComponent.getTransform().x
+        let bulletX1 = bulletComponent.getTransform().x - bulletComponent.bvx
+        let bulletY2 = bulletComponent.getTransform().y
+        let bulletY1 = bulletComponent.getTransform().y - bulletComponent.bvy
+
+        let rectangleLeftX = rectangleComponent.getTransform().x
+        let rectangleTopY = rectangleComponent.getTransform().y
+        let rectangleRightX = rectangleLeftX + rectangleComponent.colliderWidth
+        let rectangleBottomY = rectangleComponent.getTransform().y + rectangleComponent.colliderHeight
+
+        let colliding = false
+
+        let A1 = bulletY2 - bulletY1
+        let B1 = bulletX1 - bulletX2
+        let C1 = (A1 * bulletX1) + (B1 * bulletY1)
+
+        //left line
+        let A2 = rectangleBottomY - rectangleTopY
+        let B2 = rectangleLeftX - rectangleLeftX
+        let C2 = (A2 * rectangleLeftX) + (B2 * rectangleTopY)
+
+        let det = A1 * B2 - A2 * B1
+
+        if (det != 0)
+        {
+            let foundX = (B2 * C1 - B1 * C2) / det
+            let foundY = (A1 * C2 - A2 * C1) / det
+
+            //console.log(foundX + " " + foundY)
+
+            if (Math.min(bulletX1, bulletX2) <= foundX && Math.max(bulletX1, bulletX2) >= foundX)
+            {
+                if (Math.min(bulletY1, bulletY2) <= foundY && Math.max(bulletY1, bulletY2) >= foundY)
+                {
+                    //console.log("ON BULLET LINE")
+                    
+                    if (foundX >= rectangleLeftX - 0.1 && foundX <= rectangleLeftX + 0.1)
+                    {
+                        if (foundY >= rectangleTopY && foundY <= rectangleBottomY)
+                        {
+                            colliding = true
+                        }
+                    }
+                }
+            }
+        }
+
+        //right line
+        A2 = rectangleBottomY - rectangleTopY
+        B2 = rectangleRightX - rectangleRightX
+        C2 = (A2 * rectangleRightX) + (B2 * rectangleTopY)
+
+        det = A1 * B2 - A2 * B1
+
+        if (det != 0)
+        {
+            let foundX = (B2 * C1 - B1 * C2) / det
+            let foundY = (A1 * C2 - A2 * C1) / det
+
+            //console.log(foundX + " " + foundY)
+
+            if (Math.min(bulletX1, bulletX2) <= foundX && Math.max(bulletX1, bulletX2) >= foundX)
+            {
+                if (Math.min(bulletY1, bulletY2) <= foundY && Math.max(bulletY1, bulletY2) >= foundY)
+                {
+                    //console.log("ON BULLET LINE")
+                    
+                    if (foundX >= rectangleRightX - 0.1 && foundX <= rectangleRightX + 0.1)
+                    {
+                        if (foundY >= rectangleTopY && foundY <= rectangleBottomY)
+                        {
+                            colliding = true
+                        }
+                    }
+                }
+            }
+        }
+
+        //top line
+        A2 = rectangleTopY - rectangleTopY
+        B2 = rectangleLeftX - rectangleRightX
+        C2 = (A2 * rectangleLeftX) + (B2 * rectangleTopY)
+
+        det = A1 * B2 - A2 * B1
+
+        if (det != 0)
+        {
+            let foundX = (B2 * C1 - B1 * C2) / det
+            let foundY = (A1 * C2 - A2 * C1) / det
+
+            if (Math.min(bulletX1, bulletX2) <= foundX && Math.max(bulletX1, bulletX2) >= foundX)
+            {
+                if (Math.min(bulletY1, bulletY2) <= foundY && Math.max(bulletY1, bulletY2) >= foundY)
+                {
+                    console.log("We Got Here at Least")
+
+                    console.log(foundX + " " + foundY)
+                    
+                    if (foundX >= rectangleLeftX && foundX <= rectangleRightX)
+                    {
+                        ("At least the X was right")
+                        
+                        if (foundY >= rectangleTopY - 0.1 && foundY <= rectangleTopY + 0.1)
+                        {
+                            colliding = true
+                        }
+                    }
+                }
+            }
+        }
+
+        //bottom line
+        A2 = rectangleBottomY - rectangleBottomY
+        B2 = rectangleLeftX - rectangleRightX
+        C2 = (A2 * rectangleLeftX) + (B2 * rectangleBottomY)
+
+        det = A1 * B2 - A2 * B1
+
+        if (det != 0)
+        {
+            let foundX = (B2 * C1 - B1 * C2) / det
+            let foundY = (A1 * C2 - A2 * C1) / det
+
+            //console.log(foundX + " " + foundY)
+
+            if (Math.min(bulletX1, bulletX2) <= foundX && Math.max(bulletX1, bulletX2) >= foundX)
+            {
+                if (Math.min(bulletY1, bulletY2) <= foundY && Math.max(bulletY1, bulletY2) >= foundY)
+                {
+                    //console.log("ON BULLET LINE")
+                    
+                    if (foundX >= rectangleLeftX && foundX <= rectangleRightX)
+                    {
+                        if (foundY >= rectangleBottomY - 0.1 && foundY <= rectangleBottomY + 0.1)
+                        {
+                            colliding = true
+                        }
+                    }
+                }
+            }
+        }
+
+        return colliding
+
     }
 
     handleUpdate(component, eventName)
@@ -765,6 +915,7 @@ class enemyGameObject extends gameObject
    {
     this.addComponent(new enemyComponent())
     this.addComponent(new RectangleCollider(10,10,"red",true))
+    this.addComponent(new RectangleColliderDraw())
    }
 }
 
@@ -839,9 +990,9 @@ class enemyComponent extends Component
 
                     let enemyCollider = this.componentParent.getComponent("RectangleCollider")
 
-                    console.log(enemyCollider.isColliding(bulletCollider))
+                    console.log(bulletComponent.bulletCollision(bulletComponent, enemyCollider))
 
-                    if (enemyCollider.isColliding(bulletCollider))
+                    if (bulletComponent.bulletCollision(bulletComponent, enemyCollider))
                     {
                         this.IS_DEAD = true
                         bulletComponent.MADE_COLLISION = true
@@ -959,6 +1110,7 @@ class weaponPickupGameObject extends gameObject
     {
         this.addComponent(new weaponPickupComponent())
         this.addComponent(new RectangleCollider(5,5,"black",true))
+        this.addComponent(new RectangleColliderDraw())
     }
 }
 

@@ -5,7 +5,6 @@ class Transform extends Component
   y = 0
   scaleX = 1
   scaleY = 1
-  //rotate = 0
 
   setPosition(newX, newY) 
   {

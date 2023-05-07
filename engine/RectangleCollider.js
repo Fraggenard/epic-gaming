@@ -33,18 +33,6 @@ class RectangleCollider extends Component
     this.colliderHeight *= this.getTransform().scaleY
   }
 
-
-  //might be terrible
-  /*isColliding(otherComponent) {
-    if (this.xPosition + this.colliderWidth >= otherComponent.xPosition && this.xPosition + this.colliderWidth <= otherComponent.xPosition + otherComponent.colliderWidth
-      && this.yPosition + this.colliderHeight >= otherComponent.yPosition && this.yPosition + this.colliderHeight <= otherComponent.yPosition + otherComponent.colliderHeight) {
-      return true
-    }
-    else {
-      return false
-    }
-  }*/
-
   isColliding(otherComponent)
   {
     if (this.xPosition + this.colliderWidth > otherComponent.xPosition && this.xPosition < otherComponent.xPosition + otherComponent.colliderWidth
@@ -56,13 +44,6 @@ class RectangleCollider extends Component
       {
         return false
       }
-  }
-
-  draw(ctx) {
-    if (this.toDraw) {
-      ctx.fillStyle = this.colliderColor
-      ctx.fillRect(this.xPosition, this.yPosition, this.colliderWidth, this.colliderHeight)
-    }
   }
 }
 
