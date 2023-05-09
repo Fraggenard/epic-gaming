@@ -1,8 +1,5 @@
 import "/engine/engine.js"
-//Title Screen
-
-//let canvas = document.querySelector("#canv")
-//let ctx = canvas.getContext("2d")
+//Main Game
 
 class startControllerGameObject extends gameObject
 {
@@ -929,9 +926,14 @@ class enemyComponent extends Component
     enemyWidth
     enemyHeight
     enemyHealth
+    enemyMaxHealth
     IS_MOVING
     IS_ATTACKING
     IS_DEAD
+    HEALTH_INITIALIZED
+    healthBar = 0
+    healthBarCo
+    movementTimer
     
     start(ctx)
     {
@@ -945,17 +947,32 @@ class enemyComponent extends Component
         this.enemyWidth = this.componentParent.getComponent("RectangleCollider").colliderWidth
         this.enemyHeight = this.componentParent.getComponent("RectangleCollider").colliderHeight
         this.enemyHealth = 100
+        this.enemyMaxHealth = 100
         this.IS_MOVING = false
         this.IS_ATTACKING = false
         this.IS_DEAD = false
+        this.HEALTH_INITIALIZED = false
+        this.movementTimer = 0
         //console.log("started enemy")
         this.getTransform().x = 100
         this.getTransform().y = 120
+
     }
 
     update(ctx)
-    {
-        if (this.componentListeners.length == 0)
+    {   
+        if (this.HEALTH_INITIALIZED == false)
+        {
+            this.healthBar = new enemyHealthBarGameObject("enemyHealthBarGameObject")
+            gameObject.instantiate(this.healthBar)
+            this.healthBarCo = this.healthBar.getComponent("enemyHealthBarComponent")
+            this.healthBarCo.healthBarParent = this
+            this.addListener(this.healthBarCo)
+            this.updateListeners("healthInitialized")
+            this.HEALTH_INITIALIZED = true
+        }
+        
+        if (this.componentListeners.length < 2)
         {
             let ecgo = gameObject.getObjectByName("enemyControllerGameObject")
             let ecc = ecgo.getComponent("enemyControllerComponent")
@@ -965,12 +982,69 @@ class enemyComponent extends Component
         
         if (this.IS_DEAD == false)
         {
+            this.up = 0
+            this.left = 0
+            this.down = 0
+            this.right = 0
 
+            if (this.movementTimer <= 30)
+            {
+                this.up = 0 // was -1
+                this.down = 0
+                this.movementTimer++
+            }
+            else 
+            {
+                this.up = 0
+                this.down = 0 //was 1
+                if (this.movementTimer >= 60)
+                {
+                    this.movementTimer = 0
+                }
+                else
+                {
+                    this.movementTimer++
+                }
+            }
+            
+            if (this.eAccel < 5)
+            {
+                this.eAccel++
+            }
+            
+            else if (this.eAccel > 0)
+            {
+                this.eAccel--
+            }
+
+            this.IS_MOVING = this.eAccel > 0
+
+            this.evx = this.left + this.right
+            this.evy = this.up + this.down
+
+            this.magnitude = Math.sqrt((this.evx * this.evx) + (this.evy * this.evy)) 
+
+            if (this.evx != 0)
+            {
+                this.evx = this.evx / this.magnitude
+            }
+
+            if (this.evy != 0)
+            {
+                this.evy = this.evy / this.magnitude
+            }
+
+            this.getTransform().x += this.evx * this.eAccel
+            this.getTransform().y += this.evy * this.eAccel 
         }
         else
         {
             let collider = this.componentParent.getComponent("RectangleCollider")
             collider.colliderColor = "black"
+            this.IS_MOVING = false
+            this.healthBar.destroy()
+            //this.evx = 0
+            //this.evy = 0
         }
     }
 
@@ -994,14 +1068,113 @@ class enemyComponent extends Component
 
                     if (bulletComponent.bulletCollision(bulletComponent, enemyCollider))
                     {
-                        this.IS_DEAD = true
+                        //this.IS_DEAD = true
                         bulletComponent.MADE_COLLISION = true
                         this.updateListeners("bulletHit")
-                        console.log("enemy shot dead")
+                        this.enemyHealth -= 20
+                        if (this.enemyHealth <= 0)
+                        {
+                            this.IS_DEAD = true
+                        }
                     }
                 }
             }
         }
+    }
+}
+
+class enemyHealthBarGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new enemyHealthBarComponent())
+        this.addComponent(new enemyHealthBarDrawComponent())
+    }
+}
+
+class enemyHealthBarComponent extends Component
+{
+    componentName = "enemyHealthBarComponent"
+    
+    healthBarParent
+    currentHealth
+    maxHealth
+    HEALTH_INITIALIZED = false
+
+    /*start()
+    {
+        this.currentHealth = this.healthBarParent.enemyHealth
+        this.maxHealth = this.healthBarParent.enemyMaxHealth
+    }*/
+
+    update()
+    {
+        if (this.HEALTH_INITIALIZED)
+        {
+            this.currentHealth = this.healthBarParent.enemyHealth
+            this.maxHealth = this.healthBarParent.enemyMaxHealth
+        }
+    }
+
+    handleUpdate(component, eventName)
+    {
+        if (eventName == "healthInitialized")
+        {
+            this.HEALTH_INITIALIZED = true
+        }
+    }
+}
+
+class enemyHealthBarDrawComponent extends Component
+{
+    componentName = "enemyHealthBarDrawComponent"
+    
+    healthBarParentCo
+    healthBarParent
+    currentHealth
+    maxHealth
+    
+    start()
+    {
+        this.healthBarParentCo = this.componentParent.getComponent("enemyHealthBarComponent")
+        this.healthBarParent = this.healthBarParentCo.healthBarParent
+        this.currentHealth = this.healthBarParentCo.currentHealth
+       
+        console.log("health bar started")
+    }
+
+    drawScreen(ctx)
+    {
+        this.healthBarParentCo = this.componentParent.getComponent("enemyHealthBarComponent")
+        this.healthBarParent = this.healthBarParentCo.healthBarParent
+        this.currentHealth = this.healthBarParentCo.currentHealth
+        this.maxHealth = this.healthBarParentCo.maxHealth
+        let enemyX = this.healthBarParent.componentParent.Transform.x
+        let enemyY = this.healthBarParent.componentParent.Transform.y
+
+        let guiValues = Camera.worldToScreen(ctx, enemyX - 5, enemyY - 5)
+
+        let guiX = guiValues.x
+        let guiY = guiValues.y
+
+        //let guiX = enemyX
+        //let guiY = enemyY
+
+        if (this.currentHealth > 0)
+        {
+            let healthPercentage = this.currentHealth / this.maxHealth
+
+            ctx.fillStyle = "red"
+
+            ctx.fillRect(guiX,guiY,50,10)
+
+            ctx.fillStyle = "green"
+
+            ctx.fillRect(guiX,guiY,(50 * healthPercentage),10)
+
+            console.log("health bar drawn")
+        }
+
     }
 }
 

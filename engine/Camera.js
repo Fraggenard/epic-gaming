@@ -142,14 +142,14 @@ class Camera extends Component
     let sx = Camera.getLogicalScale(ctx)
     let sy = sx
 
-    x += ctx.canvas.width / 2
-    y += ctx.canvas.height / 2
-    
+    x -= Camera.main.Transform.x
+    y -= Camera.main.Transform.y
+
     x *= sx
     y *= sy
 
-    x -= Camera.main.Transform.x
-    y -= Camera.main.Transform.y
+    x += ctx.canvas.width / 2
+    y += ctx.canvas.height / 2
 
     return {x, y}
   }
