@@ -21,26 +21,8 @@ class EngineGlobals
 let canvas = document.querySelector("#canv")
 let ctx = canvas.getContext("2d")
 
-let keysDown = []
-
-document.addEventListener("keydown", keyDown)
-document.addEventListener("keyup", keyUp)
-
-let paused = false
-
-function keyUp(e) {
-  keysDown[e.key] = false
-}
-
-function keyDown(e) {
-  keysDown[e.key] = true
-  if (e.key == "p") {
-    paused = !paused
-  }
-}
-
 function engineUpdate() {
-  if (paused) {
+  if (Input.paused) {
     return
   }
   if (sceneManager.sceneChanged && sceneManager.getCurrentScene().start)
@@ -107,6 +89,8 @@ for (let gameObject of sceneManager.getCurrentScene().gameObjects)
     }
   }
 }
+
+Input.finishFrame()
 }
 
 function engineDraw() {
@@ -137,13 +121,13 @@ function engineDraw() {
 
   ctx.translate(-Camera.main.Transform.x, -Camera.main.Transform.y)
 
-let min = sceneManager.getCurrentScene().gameObjects.filter(go=>go.components.some(c=>c.draw)).map(go => go.layer).reduce((previous,current)=>Math.min(previous,current))
-let max = sceneManager.getCurrentScene().gameObjects.filter(go=>go.components.some(c=>c.draw)).map(go => go.layer).reduce((previous,current)=>Math.max(previous,current))
+let min = sceneManager.getCurrentScene().gameObjects.filter(go=>go.components.some(c=>c.draw)).map(go => go.layer).reduce((previous,current)=>Math.min(previous,current),0)
+let max = sceneManager.getCurrentScene().gameObjects.filter(go=>go.components.some(c=>c.draw)).map(go => go.layer).reduce((previous,current)=>Math.max(previous,current,),0)
   
 for (let i = min; i <= max; i++)
 {
   let gameObjects = sceneManager.getCurrentScene().gameObjects.filter(go => go.layer==i)
-  for (let gameObject of sceneManager.getCurrentScene().gameObjects)
+  for (let gameObject of gameObjects)
   {
     for (let component of gameObject.components)
     {
@@ -184,7 +168,7 @@ ctx.translate(-Camera.main.Transform.x, -Camera.main.Transform.y)
 for (let i = min; i <= max; i++)
 {
   let gameObjects = sceneManager.getCurrentScene().gameObjects.filter(go => go.layer==i)
-  for (let gameObject of sceneManager.getCurrentScene().gameObjects)
+  for (let gameObject of gameObjects)
   {
     for (let component of gameObject.components)
     {
@@ -239,7 +223,5 @@ window.start = start
 window.engineUpdate = engineUpdate
 
 window.engineDraw = engineDraw
-
-window.keysDown = keysDown
 
 window.EngineGlobals = EngineGlobals

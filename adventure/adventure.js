@@ -1,4 +1,69 @@
 import "/engine/engine.js"
+//Title Screen
+class titleControllerGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new titleControllerComponent())
+        this.addComponent(new titleControllerDrawComponent())
+        this.addComponent(new Textbox("white", "50px Arial","Game Title","left"))
+        //this.addComponent(new Textbox("white","20px Arial","Press Space to Start","left"))
+    }
+}
+
+class titleControllerComponent extends Component
+{
+    start()
+    {
+        
+    }
+
+    update(ctx)
+    {   
+        if (Input.keysUp["e"])
+        {
+            sceneManager.changeScene(1)
+        }
+    }
+}
+
+class titleControllerDrawComponent extends Component
+{
+    draw(ctx)
+    {
+        let zeros = Camera.getZeros(ctx)
+        
+        let currentAspectRatio = ctx.canvas.width / ctx.canvas.height
+        let xWidth = 0
+        let yHeight = 0
+
+        if (EngineGlobals.requestedAspectRatio > currentAspectRatio) //letterboxes top and bottom
+        {
+            yHeight = ctx.canvas.width / EngineGlobals.requestedAspectRatio
+
+            xWidth = ctx.canvas.width
+        }
+        else //letterboxes on side
+        {
+            xWidth = ctx.canvas.height * EngineGlobals.requestedAspectRatio
+
+            yHeight = ctx.canvas.height
+        }
+
+        let text = this.componentParent.getComponent("Textbox")
+        let x = (xWidth / 4)
+        console.log(xWidth)
+        console.log(ctx.measureText(text.textString).width)
+        let y = yHeight / 3
+        let worldCoords = Camera.screenToWorld(ctx, zeros.zeroX + x,zeros.zeroY + y)
+        console.log(worldCoords.x)
+        text.getTransform().x = worldCoords.x
+        text.getTransform().y = worldCoords.y
+    }
+}
+
+
+
 //Main Game
 
 class startControllerGameObject extends gameObject
@@ -7,7 +72,7 @@ class startControllerGameObject extends gameObject
     {
         this.addComponent(new startControllerComponent())
         //console.log("added start component")
-        let debugAccel = new Textbox("white", "Impact", 50,"ba","left")
+        let debugAccel = new Textbox("white", "20px Arial","ba","left")
         debugAccel.componentName = "debugAccel"
         this.addComponent(debugAccel)
     }
@@ -117,6 +182,8 @@ class debugGUIComponent extends Component
 
 class playerGameObject extends gameObject
 {
+    layer = 15
+    
     start()
     {
         this.addComponent(new playerComponent())
@@ -137,6 +204,14 @@ class playerComponent extends Component
     playerHeight = 0
     IS_MOVING = false
     IS_ATTACKING = false
+    levelAreaXLeft
+    levelAreaXRight
+    levelAreaYUp
+    levelAreaYDown
+    levelAreaConnectedEdgeUp
+    levelAreaConnectedEdgeDown
+    levelAreaConnectedEdgeLeft
+    levelAreaConnectedEdgeRight
     
     start()
     {
@@ -159,26 +234,26 @@ class playerComponent extends Component
 
         this.keyPressed = false
 
-        if (keysDown["w"])
+        if (Input.keysDown["w"])
         {
             this.up = -1
             this.keyPressed = true
             //console.log("W")
         }
 
-        if (keysDown["a"])
+        if (Input.keysDown["a"])
         {
             this.left = -1
             this.keyPressed = true
         }
 
-        if (keysDown["s"])
+        if (Input.keysDown["s"])
         {
             this.down = 1
             this.keyPressed = true
         }
 
-        if (keysDown["d"])
+        if (Input.keysDown["d"])
         {
             this.right = 1
             this.keyPressed = true
@@ -213,8 +288,616 @@ class playerComponent extends Component
             this.pvy = this.pvy / this.magnitude
         }
 
-        this.getTransform().x += this.pvx * this.pAccel
-        this.getTransform().y += this.pvy * this.pAccel 
+        let nextXLocation = this.getTransform().x + this.pvx * this.pAccel
+        let nextYLocation = this.getTransform().y + this.pvy * this.pAccel
+        
+        if (this.levelAreaConnectedEdgeUp == false)
+        {
+            if (nextYLocation < this.levelAreaYUp)
+            {
+            nextYLocation = this.levelAreaYUp
+            }
+        }
+        if (this.levelAreaConnectedEdgeDown == false)
+        {
+            if (nextYLocation + this.playerHeight > this.levelAreaYDown)
+            {
+                nextYLocation = this.levelAreaYDown - this.playerHeight
+            }
+        }
+        if (this.levelAreaConnectedEdgeLeft == false)
+        {
+            if (nextXLocation < this.levelAreaXLeft)
+            {
+                nextXLocation = this.levelAreaXLeft
+            }
+        }
+        if (this.levelAreaConnectedEdgeRight == false)
+        {
+            if (nextXLocation + this.playerWidth > this.levelAreaXRight)
+            {
+                nextXLocation = this.levelAreaXRight - this.playerWidth
+            }
+        }
+
+        this.getTransform().x = nextXLocation
+        this.getTransform().y = nextYLocation
+        
+        /*switch(this.levelAreaConnectedEdge)
+        {
+            case "up":
+                if ((this.getTransform().x + this.pvx * this.pAccel) + this.playerWidth > this.levelAreaXRight)
+                {
+                    this.getTransform().x = this.levelAreaXRight - this.playerWidth
+                }
+                else if (this.getTransform().x + this.pvx * this.pAccel < this.levelAreaXLeft)
+                {
+                    this.getTransform().x = this.levelAreaXLeft
+                }
+                else
+                {
+                    this.getTransform().x += this.pvx * this.pAccel
+                }
+
+                if ((this.getTransform().y + this.pvy * this.pAccel) + this.playerHeight > this.levelAreaYDown)
+                {
+                    this.getTransform().y = this.levelAreaYDown - this.playerHeight
+                }
+                else
+                {
+                    this.getTransform().y += this.pvy * this.pAccel
+                }
+                break;
+            case "down":
+                if ((this.getTransform().x + this.pvx * this.pAccel) + this.playerWidth > this.levelAreaXRight)
+                {
+                    this.getTransform().x = this.levelAreaXRight - this.playerWidth
+                }
+                else if (this.getTransform().x + this.pvx * this.pAccel < this.levelAreaXLeft)
+                {
+                    this.getTransform().x = this.levelAreaXLeft
+                }
+                else
+                {
+                    this.getTransform().x += this.pvx * this.pAccel
+                }
+
+                if (this.getTransform().y + this.pvy * this.pAccel < this.levelAreaYUp)
+                {
+                    this.getTransform().y = this.levelAreaYUp
+                }
+                else
+                {
+                    this.getTransform().y += this.pvy * this.pAccel
+                }
+                break;
+            case "left":
+                if ((this.getTransform().x + this.pvx * this.pAccel) + this.playerWidth > this.levelAreaXRight)
+                {
+                    this.getTransform().x = this.levelAreaXRight - this.playerWidth
+                }
+                else
+                {
+                    this.getTransform().x += this.pvx * this.pAccel
+                }
+
+                if (this.getTransform().y + this.pvy * this.pAccel < this.levelAreaYUp)
+                {
+                    this.getTransform().y = this.levelAreaYUp
+                }
+                else if ((this.getTransform().y + this.pvy * this.pAccel) + this.playerHeight > this.levelAreaYDown)
+                {
+                    this.getTransform().y = this.levelAreaYDown - this.playerHeight
+                }
+                else
+                {
+                    this.getTransform().y += this.pvy * this.pAccel
+                }
+                break;
+            case "right":
+                if (this.getTransform().x + this.pvx * this.pAccel < this.levelAreaXLeft)
+                {
+                    this.getTransform().x = this.levelAreaXLeft
+                }
+                else
+                {
+                    this.getTransform().x += this.pvx * this.pAccel
+                }
+
+                if (this.getTransform().y + this.pvy * this.pAccel < this.levelAreaYUp)
+                {
+                    this.getTransform().y = this.levelAreaYUp
+                }
+                else if ((this.getTransform().y + this.pvy * this.pAccel) + this.playerHeight > this.levelAreaYDown)
+                {
+                    this.getTransform().y = this.levelAreaYDown - this.playerHeight
+                }
+                else
+                {
+                    this.getTransform().y += this.pvy * this.pAccel
+                }
+                break;
+        }
+        
+        //this.getTransform().x += this.pvx * this.pAccel
+        //this.getTransform().y += this.pvy * this.pAccel
+        
+        /*if ((this.getTransform().x + this.pvx * this.pAccel) + this.playerWidth > this.levelAreaXRight)
+        {
+            this.getTransform().x = this.levelAreaXRight - this.playerWidth
+        }
+
+        if (this.getTransform().x + this.pvx * this.pAccel < this.levelAreaXLeft)
+        {
+            this.getTransform().x = this.levelAreaXLeft
+        }
+
+        if (this.getTransform().y + this.pvy * this.pAccel < this.levelAreaYUp)
+        {
+            this.getTransform().y = this.levelAreaYUp
+        }
+
+        if ((this.getTransform().y + this.pvy * this.pAccel) + this.playerHeight > this.levelAreaYDown)
+        {
+            this.getTransform().y = this.levelAreaYDown - this.playerHeight
+        }*/
+    }
+
+    handleUpdate(component, eventName)
+    {
+        if (eventName == "activeLevelArea")
+        {
+            this.levelAreaConnectedEdgeUp = component.connectedEdgeUp
+            this.levelAreaConnectedEdgeDown = component.connectedEdgeDown
+            this.levelAreaConnectedEdgeLeft = component.connectedEdgeLeft
+            this.levelAreaConnectedEdgeRight = component.connectedEdgeRight
+            this.levelAreaXLeft = component.xPosition
+            this.levelAreaXRight = component.xPosition + component.width
+            this.levelAreaYUp = component.yPosition
+            this.levelAreaYDown = component.yPosition + component.height
+        }
+    }
+}
+
+class levelAreaGameObject extends gameObject
+{
+    start()
+    {
+        //this.addComponent(new levelAreaComponent())
+        //this.addComponent(new levelAreaDrawComponent())
+        this.layer = -10
+    }
+}
+
+class levelAreaComponent extends Component
+{
+    componentName = "levelAreaComponent"
+
+    xPosition
+    yPosition
+    width
+    height
+    color
+    enemies
+    weapons
+    connectedEdgeUp
+    connectedEdgeDown
+    connectedEdgeLeft
+    connectedEdgeRight
+    transitionEdge
+
+    constructor(xPosition,yPosition,width,height,color,enemies,weapons,connectedEdgeUp,connectedEdgeDown,connectedEdgeLeft,connectedEdgeRight,transitionEdge)
+    {
+        super()
+        this.xPosition = xPosition
+        this.yPosition = yPosition
+        this.width = width
+        this.height = height
+        this.color = color
+        this.enemies = enemies
+        this.weapons = weapons
+        this.connectedEdgeUp = connectedEdgeUp
+        this.connectedEdgeDown = connectedEdgeDown
+        this.connectedEdgeLeft = connectedEdgeLeft
+        this.connectedEdgeRight = connectedEdgeRight
+        this.transitionEdge = transitionEdge
+    }
+
+    start()
+    {
+        for (let i = 0; i < this.enemies; i++)
+        {
+            let enemyX = Math.floor(Math.random() * (this.width)) + this.xPosition
+            let enemyY = Math.floor(Math.random() * (this.height)) + this.yPosition
+            console.log("enemyX " + enemyX + " enemyY " + enemyY)
+            let generatedEnemy = new enemyGameObject("enemyGameObject")
+            gameObject.instantiate(generatedEnemy)
+            let generatedEnemyCO = generatedEnemy.getComponent("enemyComponent")
+            console.log("spawned an enemy")
+            generatedEnemyCO.getTransform().x = enemyX
+            generatedEnemyCO.getTransform().y = enemyY
+        }
+        for (let i = 0; i < this.weapons; i++)
+        {
+            let weaponX = Math.floor(Math.random() * (this.width)) + this.xPosition
+            let weaponY = Math.floor(Math.random() * (this.height)) + this.yPosition
+            console.log("weaponX " + weaponX + " weaponY " + weaponY)
+            let generatedWeapon = new weaponPickupGameObject("weaponPickupGameObject")
+            gameObject.instantiate(generatedWeapon)
+            //let generatedWeaponCO = generatedWeapon.getComponent("weaponPickupComponent")
+            console.log("spawned a weapon pickup")
+            generatedWeapon.Transform.x = weaponX
+            generatedWeapon.Transform.y = weaponY
+        }
+    }
+
+    update()
+    {
+        let playerGO = gameObject.getObjectByName("playerGameObject")
+        let playerCO = playerGO.getComponent("playerComponent")
+        
+        if (this.componentListeners.length == 0)
+        {
+            this.addListener(playerCO)
+        }
+
+        let playerX = playerCO.getTransform().x
+        let playerY = playerCO.getTransform().y
+
+        if (playerX >= this.xPosition && playerX <= this.xPosition + this.width)
+        {
+            if (playerY >= this.yPosition && playerY <= this.yPosition + this.height)
+            {
+                this.updateListeners("activeLevelArea")
+            }
+        }
+    }
+}
+
+class levelAreaDrawComponent extends Component
+{
+    componentName = "levelAreaDrawComponent"
+
+    xPosition
+    yPosition
+    width
+    height
+    color
+
+    draw(ctx)
+    {
+        let levelCO = this.componentParent.getComponent("levelAreaComponent")
+        this.xPosition = levelCO.xPosition
+        this.yPosition = levelCO.yPosition
+        this.width = levelCO.width
+        this.height = levelCO.height
+        this.color = levelCO.color
+
+        ctx.fillStyle = this.color
+        ctx.fillRect(this.xPosition,this.yPosition,this.width,this.height)
+    }
+}
+
+class levelAreaConfigurationGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new levelAreaConfigurationComponent())
+    }
+}
+
+class levelAreaConfigurationComponent extends Component
+{
+    componentName = "levelAreaConfigurationComponent"
+
+    levelAreas = []
+    numberOfLevels = 10
+    
+    start()
+    {
+        for (let i = 0; i < this.numberOfLevels; i++)
+        {
+            if (i == 0)
+            {
+                let edgeUp = true
+                let edgeDown = false
+                let edgeLeft = false
+                let edgeRight = false
+                let transition = "up"
+                let x = 0
+                let y = 0
+                let width = 300
+                let height = 300
+                let color = "blue"
+                let enemies = 0
+                let weapons = 0
+
+                let levelGO = new levelAreaGameObject("levelAreaGameObject")
+                let levelCO = new levelAreaComponent(x,y,width,height,color,enemies,weapons,edgeUp,edgeDown,edgeLeft,edgeRight,transition)
+                gameObject.instantiate(levelGO)
+                levelGO.addComponent(levelCO)
+                levelGO.addComponent(new levelAreaDrawComponent())
+                this.levelAreas.push(levelCO)
+            }
+            else
+            {
+                let previousLevel = this.levelAreas[i - 1]
+                let edgeUp = false
+                let edgeDown= false
+                let edgeLeft = false
+                let edgeRight = false
+                let transition = "up"
+
+                let x = 0
+                let y = 0
+                let width = 300
+                let height = 300
+                let color = "blue"
+                let enemies = Math.floor(Math.random() * 4)
+                let weapons = Math.floor(Math.random() * 2)
+
+                let nextTransition = Math.floor(Math.random() * 3) + 1
+                console.log(nextTransition)
+
+                switch(previousLevel.transitionEdge)
+                {
+                    case "up":
+                        edgeDown = true
+                        x = previousLevel.xPosition
+                        y = previousLevel.yPosition - height
+                        while (nextTransition != -1)
+                        {
+                        if (nextTransition == 1)
+                        {
+                            if (this.searchForOverlap("left",x,y,width,height) == false)
+                            {
+                            transition = "left"
+                            edgeLeft = true
+                            nextTransition = -1
+                            }
+                            else
+                            {
+                                nextTransition++
+                            }
+                        }
+                        else if (nextTransition == 2)
+                        {
+                            if (this.searchForOverlap("up",x,y,width,height) == false)
+                            {
+                            transition = "up"
+                            edgeUp = true
+                            nextTransition = -1
+                            }
+                            else
+                            {
+                                nextTransition++
+                            }
+                        }
+                        else if (nextTransition == 3)
+                        {
+                            if (this.searchForOverlap("right",x,y,width,height) == false)
+                            {
+                            transition = "right"
+                            edgeRight = true
+                            nextTransition = -1
+                            }
+                            else
+                            {
+                                nextTransition = 1
+                            }
+                        }
+                    }
+                        break;
+                    case "down":
+                        edgeUp = true
+                        x = previousLevel.xPosition
+                        y = previousLevel.yPosition + height
+                        while(nextTransition != -1)
+                        {
+                        if (nextTransition == 1)
+                        {
+                            if (this.searchForOverlap("left",x,y,width,height) == false)
+                            {
+                            transition = "left"
+                            edgeLeft = true
+                            nextTransition = -1
+                            }
+                            else
+                            {
+                                nextTransition++
+                            }
+                        }
+                        else if (nextTransition == 2)
+                        {
+                            if (this.searchForOverlap("down",x,y,width,height) == false)
+                            {
+                            transition = "down"
+                            edgeDown = true
+                            nextTransition = -1
+                            }
+                            else
+                            {
+                                nextTransition++
+                            }
+                        }
+                        else if (nextTransition == 3)
+                        {
+                            if (this.searchForOverlap("right",x,y,width,height) == false)
+                            {
+                                transition = "right"
+                                edgeRight = true
+                                nextTransition = -1
+                            }
+                            else
+                            {
+                                nextTransition = 1
+                            }
+                        }
+                    }
+                        break;
+                    case "left":
+                        edgeRight = true
+                        x = previousLevel.xPosition - width
+                        y = previousLevel.yPosition
+                        while (nextTransition != -1)
+                        {
+                        if (nextTransition == 1)
+                        {
+                            if (this.searchForOverlap("down",x,y,width,height) == false)
+                            {
+                            transition = "down"
+                            edgeDown = true
+                            nextTransition = -1
+                            }
+                            else
+                            {
+                                nextTransition++
+                            }
+                        }
+                        else if (nextTransition == 2)
+                        {
+                            if (this.searchForOverlap("left",x,y,width,height) == false)
+                            {
+                            transition = "left"
+                            edgeLeft = true
+                            nextTransition = -1
+                            }
+                            else
+                            {
+                                nextTransition++
+                            }
+                        }
+                        else if (nextTransition == 3)
+                        {
+                            if (this.searchForOverlap("up",x,y,width,height) == false)
+                            {
+                                transition = "up"
+                                edgeUp = true
+                                nextTransition = -1
+                            }
+                            else
+                            {
+                                nextTransition = 1
+                            }
+                        }
+                    }
+                        break;
+                    case "right":
+                        edgeLeft = true
+                        x = previousLevel.xPosition + width
+                        y = previousLevel.yPosition
+                        while (nextTransition != -1)
+                        {
+                        if (nextTransition == 1)
+                        {
+                            if (this.searchForOverlap("up",x,y,width,height) == false)
+                            {
+                            transition = "up"
+                            edgeUp = true
+                            nextTransition = -1
+                            }
+                            else
+                            {
+                                nextTransition++
+                            }
+                        }
+                        else if (nextTransition == 2)
+                        {
+                            if (this.searchForOverlap("right",x,y,width,height) == false)
+                            {
+                            transition = "right"
+                            edgeRight = true
+                            nextTransition = -1
+                            }
+                            else
+                            {
+                                nextTransition++
+                            }
+                        }
+                        else if (nextTransition == 3)
+                        {
+                            if (this.searchForOverlap("down",x,y,width,height) == false)
+                            {
+                                transition = "down"
+                                edgeDown = true
+                                nextTransition = -1
+                            }
+                            else
+                            {
+                                nextTransition = 1
+                            }
+                        }
+                    }
+                        break;
+                }
+
+                if ( i == this.numberOfLevels - 1)
+                {
+                    if (transition == "up")
+                    {
+                        edgeUp = false
+                    }
+                    else if (transition == "down")
+                    {
+                        edgeDown = false
+                    }
+                    else if (transition == "left")
+                    {
+                        edgeLeft = false
+                    }
+                    else if (transition == "right")
+                    {
+                        edgeRight = false
+                    }
+                }
+
+                let levelGO = new levelAreaGameObject("levelAreaGameObject")
+                let levelCO = new levelAreaComponent(x,y,width,height,color,enemies,weapons,edgeUp,edgeDown,edgeLeft,edgeRight,transition)
+                gameObject.instantiate(levelGO)
+                levelGO.addComponent(levelCO)
+                levelGO.addComponent(new levelAreaDrawComponent())
+                this.levelAreas.push(levelCO)
+            }
+        }
+    }
+
+    searchForOverlap(direction, xPosition, yPosition, width, height)
+    {
+        let result = false
+        
+        for (let i = 0; i < this.levelAreas.length; i++)
+        {
+            let levelArea = this.levelAreas[i]
+            switch (direction)
+            {
+                case "up":
+                    if (levelArea.yPosition == yPosition - height)
+                    {
+                        result = true
+                    }
+                    break;
+                case "down":
+                    if (levelArea.yPosition == yPosition + height)
+                    {
+                        result = true
+                    }
+                    break;
+                case "left":
+                    if (levelArea.xPosition == xPosition - width)
+                    {
+                        result = true
+                    }
+                    break;
+                case "right":
+                    if (levelArea.xPosition == xPosition + width)
+                    {
+                        result = true
+                    }
+                    break;
+            }
+        }
+
+        return result
     }
 }
 
@@ -763,7 +1446,7 @@ class shooterControllerDrawGameObject extends gameObject
 {
     start()
     {
-        let ammoCounter = new Textbox("white", "Impact", "heehoo", "right")
+        let ammoCounter = new Textbox("white", "20px Arial", "heehoo", "right")
         ammoCounter.componentName = "ammoCounter"
         this.addComponent(ammoCounter)
         this.addComponent(new shooterControllerDrawComponent())
@@ -796,30 +1479,6 @@ class shooterControllerDrawComponent extends Component
         this.ammoConCo = this.ammoCon.getComponent("shooterControllerComponent")
         this.ammoText = this.componentParent.getComponent("ammoCounter")
         //this.ammoText.getTransform().y += 50
-    }
-
-    update(ctx)
-    {
-        //this.ctx = ctx
-        this.mouseWorldCoords = Camera.GUIToWorld(ctx, Input.mouseX, Input.mouseY)
-        this.reserve = this.ammoConCo.currentReserve
-        this.mag = this.ammoConCo.currentMag
-
-        if (this.IS_RELOADING == false)
-        {
-        this.ammoString = this.mag + "/" + this.reserve
-        }
-        else
-        {
-            this.ammoString = "Reloading!"
-        }
-        this.ammoText.textString = this.ammoString
-
-        
-        /*ctx.beginPath()
-        ctx.moveTo(this.shooterCo.getTransform.x, this.shooterCo.getTransform.y)
-        ctx.lineTo(this.mouseWorldCoords.x, this.mouseWorldCoords.y)
-        ctx.stroke()*/
     }
 
     handleUpdate(component, eventName)
@@ -873,6 +1532,20 @@ class shooterControllerDrawComponent extends Component
 
     draw(ctx)
     {
+        this.mouseWorldCoords = Camera.GUIToWorld(ctx, Input.mouseX, Input.mouseY)
+        this.reserve = this.ammoConCo.currentReserve
+        this.mag = this.ammoConCo.currentMag
+
+        if (this.IS_RELOADING == false)
+        {
+        this.ammoString = this.mag + "/" + this.reserve
+        }
+        else
+        {
+            this.ammoString = "Reloading!"
+        }
+        this.ammoText.textString = this.ammoString
+        
         let zeros = Camera.getZeros(ctx)
 
         let yHeight = 0
@@ -889,13 +1562,13 @@ class shooterControllerDrawComponent extends Component
         {
             yHeight = ctx.canvas.width/EngineGlobals.requestedAspectRatio - (textHeight * 3)
 
-            xWidth = ctx.canvas.width - (textWidth * 3)
+            xWidth = ctx.canvas.width - (textWidth * 5)
         }
         else //letterboxes on sides
         {
             yHeight = ctx.canvas.height - (textHeight * 3)
 
-            xWidth = ctx.canvas.height * EngineGlobals.requestedAspectRatio - (textWidth * 3)
+            xWidth = ctx.canvas.height * EngineGlobals.requestedAspectRatio - (textWidth * 5)
         }
         
         let worldSpaceCoords = Camera.screenToWorld(ctx, zeros.zeroX + xWidth, zeros.zeroY + yHeight)
@@ -954,8 +1627,8 @@ class enemyComponent extends Component
         this.HEALTH_INITIALIZED = false
         this.movementTimer = 0
         //console.log("started enemy")
-        this.getTransform().x = 100
-        this.getTransform().y = 120
+        //this.getTransform().x = 100
+        //this.getTransform().y = 120
 
     }
 
@@ -1151,8 +1824,10 @@ class enemyHealthBarDrawComponent extends Component
         this.maxHealth = this.healthBarParentCo.maxHealth
         let enemyX = this.healthBarParent.componentParent.Transform.x
         let enemyY = this.healthBarParent.componentParent.Transform.y
+        let enemyHeightCo = this.healthBarParent.componentParent.getComponent("RectangleCollider")
+        let enemyHeight = enemyHeightCo.colliderHeight
 
-        let guiValues = Camera.worldToScreen(ctx, enemyX - 5, enemyY - 5)
+        let guiValues = Camera.worldToScreen(ctx, enemyX - enemyHeight * 0.5, enemyY - enemyHeight * 0.75)
 
         let guiX = guiValues.x
         let guiY = guiValues.y
@@ -1307,8 +1982,8 @@ class weaponPickupComponent extends Component
         let shcgo = gameObject.getObjectByName("shooterControllerGameObject")
         let shcc = shcgo.getComponent("shooterControllerComponent")
         this.addListener(shcc)
-        this.getTransform().x = -77
-        this.getTransform().y = -77
+        //this.getTransform().x = -77
+        //this.getTransform().y = -77
     }
 
     update()
@@ -1400,7 +2075,7 @@ class cameraTrackerComponent extends Component
     }
 }
 
-class TitleScene extends sceneContainer
+class GameScene extends sceneContainer
 {
     start()
     {
@@ -1423,6 +2098,7 @@ class TitleScene extends sceneContainer
         this.addGameObject(new weaponPickupGameObject("weaponPickupGameObject"))
         this.addGameObject(new enemyGameObject("enemyGameObject"))
         this.addGameObject(new enemyControllerGameObject("enemyControllerGameObject"))
+        this.addGameObject(new levelAreaConfigurationGameObject("levelAreaConfigurationGameObject"))
     }
     update()
     {
@@ -1436,11 +2112,11 @@ class TitleScene extends sceneContainer
 
 //Main Game
 
-class GameScene extends sceneContainer
+class TitleScene extends sceneContainer
 {
     start()
     {
-
+        this.addGameObject(new titleControllerGameObject("titleControllerGameObject"))
     }
     update()
     {
@@ -1470,6 +2146,8 @@ class DeathScene extends sceneContainer
     }
 }
 
-let titleScene = new TitleScene("purple")
+let gameScene = new GameScene("purple")
+let titleScene = new TitleScene("black")
 sceneManager.addScene(titleScene)
+sceneManager.addScene(gameScene)
 //console.log("added title scene")
