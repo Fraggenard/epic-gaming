@@ -47,9 +47,9 @@ class gameObject
   static instantiate(gameObject)
   {
     sceneManager.getCurrentScene().gameObjects.push(gameObject)
-    if (gameObject.start && !gameObject.started)
+    if (gameObject.start && !gameObject.gameObjectStarted)
     {
-      gameObject.started = true
+      gameObject.gameObjectStarted = true
       gameObject.start()
     }
   }

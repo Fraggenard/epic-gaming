@@ -6,8 +6,54 @@ class titleControllerGameObject extends gameObject
     {
         this.addComponent(new titleControllerComponent())
         this.addComponent(new titleControllerDrawComponent())
-        this.addComponent(new Textbox("white", "50px Arial","Game Title","left"))
+        let title = new Textbox("white", "50px Arial","Schüt Game","left")
+        title.componentName = "titleText"
+        this.addComponent(title)
+        //this.addComponent(new Textbox("white", "50px Arial","Schüt Game","left"))
         //this.addComponent(new Textbox("white","20px Arial","Press Space to Start","left"))
+    }
+}
+
+class titleMessageControllerGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new titleMessageControllerDrawComponent())
+        let message = new Textbox("white","20px Arial","Press E to Start","left")
+        message.componentName = "messageText"
+        this.addComponent(message)
+    }
+}
+
+class titleMessageControllerDrawComponent extends Component
+{
+    draw(ctx)
+    {
+        let zeros = Camera.getZeros(ctx)
+        
+        let currentAspectRatio = ctx.canvas.width / ctx.canvas.height
+        let xWidth = 0
+        let yHeight = 0
+
+        if (EngineGlobals.requestedAspectRatio > currentAspectRatio) //letterboxes top and bottom
+        {
+            yHeight = ctx.canvas.width / EngineGlobals.requestedAspectRatio
+
+            xWidth = ctx.canvas.width
+        }
+        else //letterboxes on side
+        {
+            xWidth = ctx.canvas.height * EngineGlobals.requestedAspectRatio
+
+            yHeight = ctx.canvas.height
+        }
+
+        let message = this.componentParent.getComponent("messageText")
+        let x2 = (xWidth / 3)
+        let y2 = yHeight - (yHeight / 3)
+        let worldCoords = Camera.screenToWorld(ctx, zeros.zeroX + x2,zeros.zeroY + y2)
+        message.getTransform().x = worldCoords.x
+        message.getTransform().y = worldCoords.y
     }
 }
 
@@ -50,13 +96,13 @@ class titleControllerDrawComponent extends Component
             yHeight = ctx.canvas.height
         }
 
-        let text = this.componentParent.getComponent("Textbox")
+        let text = this.componentParent.getComponent("titleText")
         let x = (xWidth / 4)
-        console.log(xWidth)
-        console.log(ctx.measureText(text.textString).width)
+        //console.log(xWidth)
+        //console.log(ctx.measureText(text.textString).width)
         let y = yHeight / 3
         let worldCoords = Camera.screenToWorld(ctx, zeros.zeroX + x,zeros.zeroY + y)
-        console.log(worldCoords.x)
+        //console.log(worldCoords.x)
         text.getTransform().x = worldCoords.x
         text.getTransform().y = worldCoords.y
     }
@@ -197,8 +243,8 @@ class playerComponent extends Component
 {
     componentName = "playerComponent"
     
-    pvx = 0
-    pvy = 0
+    pvx
+    pvy
     pAccel = 0
     playerWidth = 0
     playerHeight = 0
@@ -215,18 +261,20 @@ class playerComponent extends Component
     
     start()
     {
-        this.pvx = 0
-        this.pvy = 0
+        this.pvx = 80
+        this.pvy = 270
         this.pAccel = 0
         this.playerWidth = this.componentParent.getComponent("RectangleCollider").colliderWidth
         this.playerHeight = this.componentParent.getComponent("RectangleCollider").colliderHeight
         this.IS_MOVING = false
         this.IS_ATTACKING = false
+        this.getTransform().x = this.pvx
+        this.getTransform().y = this.pvy
         //console.log("started player")
     }
 
     update()
-    {
+    {   
         this.up = 0
         this.left = 0
         this.down = 0
@@ -456,6 +504,12 @@ class playerComponent extends Component
             this.levelAreaYUp = component.yPosition
             this.levelAreaYDown = component.yPosition + component.height
         }
+
+        if (eventName == "levelsInitialized")
+        {
+            this.getTransform().x = 80
+            this.getTransform().y = 270
+        }
     }
 }
 
@@ -509,11 +563,11 @@ class levelAreaComponent extends Component
         {
             let enemyX = Math.floor(Math.random() * (this.width)) + this.xPosition
             let enemyY = Math.floor(Math.random() * (this.height)) + this.yPosition
-            console.log("enemyX " + enemyX + " enemyY " + enemyY)
+            //console.log("enemyX " + enemyX + " enemyY " + enemyY)
             let generatedEnemy = new enemyGameObject("enemyGameObject")
             gameObject.instantiate(generatedEnemy)
             let generatedEnemyCO = generatedEnemy.getComponent("enemyComponent")
-            console.log("spawned an enemy")
+            //console.log("spawned an enemy")
             generatedEnemyCO.getTransform().x = enemyX
             generatedEnemyCO.getTransform().y = enemyY
         }
@@ -521,11 +575,11 @@ class levelAreaComponent extends Component
         {
             let weaponX = Math.floor(Math.random() * (this.width)) + this.xPosition
             let weaponY = Math.floor(Math.random() * (this.height)) + this.yPosition
-            console.log("weaponX " + weaponX + " weaponY " + weaponY)
+            //console.log("weaponX " + weaponX + " weaponY " + weaponY)
             let generatedWeapon = new weaponPickupGameObject("weaponPickupGameObject")
             gameObject.instantiate(generatedWeapon)
             //let generatedWeaponCO = generatedWeapon.getComponent("weaponPickupComponent")
-            console.log("spawned a weapon pickup")
+            //console.log("spawned a weapon pickup")
             generatedWeapon.Transform.x = weaponX
             generatedWeapon.Transform.y = weaponY
         }
@@ -539,6 +593,42 @@ class levelAreaComponent extends Component
         if (this.componentListeners.length == 0)
         {
             this.addListener(playerCO)
+
+            let gameObjects = sceneManager.getCurrentScene().gameObjects
+            for (let gameObject of gameObjects)
+            {
+                if (gameObject.gameObjectName == "enemyGameObject")
+                {
+                    let enemyCO = gameObject.getComponent("enemyComponent")
+                    this.addListener(enemyCO)
+                }
+            }
+        }
+
+        let gameObjects = sceneManager.getCurrentScene().gameObjects
+        for (let gameObject of gameObjects)
+        {
+            if (gameObject.gameObjectName == "enemyGameObject")
+                {
+                    let enemyCO = gameObject.getComponent("enemyComponent")
+                    let enemyX = enemyCO.getTransform().x
+                    let enemyY = enemyCO.getTransform().y
+
+                    if (enemyX >= this.xPosition && enemyX <= this.xPosition + this.width)
+                    {
+                        if (enemyY >= this.yPosition && enemyY <= this.yPosition + this.height)
+                        {
+                            enemyCO.levelAreaConnectedEdgeUp = this.connectedEdgeUp
+                            enemyCO.levelAreaConnectedEdgeDown = this.connectedEdgeDown
+                            enemyCO.levelAreaConnectedEdgeLeft = this.connectedEdgeLeft
+                            enemyCO.levelAreaConnectedEdgeRight = this.connectedEdgeRight
+                            enemyCO.levelAreaXLeft = this.xPosition
+                            enemyCO.levelAreaXRight = this.xPosition + this.width
+                            enemyCO.levelAreaYUp = this.yPosition
+                            enemyCO.levelAreaYDown = this.yPosition + this.height
+                        }
+                    }
+                }
         }
 
         let playerX = playerCO.getTransform().x
@@ -592,6 +682,7 @@ class levelAreaConfigurationComponent extends Component
 
     levelAreas = []
     numberOfLevels = 10
+    LEVELS_INITIALIZED = false
     
     start()
     {
@@ -618,6 +709,12 @@ class levelAreaConfigurationComponent extends Component
                 levelGO.addComponent(levelCO)
                 levelGO.addComponent(new levelAreaDrawComponent())
                 this.levelAreas.push(levelCO)
+                let initialWeapon = new weaponPickupGameObject()
+                
+                initialWeapon.Transform.x = 160
+                initialWeapon.Transform.y = 200
+                gameObject.instantiate(initialWeapon)
+                //console.log(initialWeapon.Transform.x + " " + initialWeapon.Transform.y)
             }
             else
             {
@@ -637,7 +734,7 @@ class levelAreaConfigurationComponent extends Component
                 let weapons = Math.floor(Math.random() * 2)
 
                 let nextTransition = Math.floor(Math.random() * 3) + 1
-                console.log(nextTransition)
+                //console.log(nextTransition)
 
                 switch(previousLevel.transitionEdge)
                 {
@@ -853,11 +950,28 @@ class levelAreaConfigurationComponent extends Component
 
                 let levelGO = new levelAreaGameObject("levelAreaGameObject")
                 let levelCO = new levelAreaComponent(x,y,width,height,color,enemies,weapons,edgeUp,edgeDown,edgeLeft,edgeRight,transition)
-                gameObject.instantiate(levelGO)
                 levelGO.addComponent(levelCO)
                 levelGO.addComponent(new levelAreaDrawComponent())
+                gameObject.instantiate(levelGO)
+                
                 this.levelAreas.push(levelCO)
             }
+        }
+
+        this.LEVELS_INITIALIZED = true
+    }
+
+    update()
+    {
+        if (this.componentListeners.length == 0 && this.LEVELS_INITIALIZED)
+        {
+            let playerGO = gameObject.getObjectByName("playerGameObject")
+            let playerCO = playerGO.getComponent("playerComponent")
+            this.addListener(playerCO)
+            let cameraGO = gameObject.getObjectByName("cameraTrackerGameObject")
+            let cameraCO = cameraGO.getComponent("cameraTrackerComponent")
+            this.addListener(cameraCO)
+            this.updateListeners("levelsInitialized")
         }
     }
 
@@ -1607,6 +1721,19 @@ class enemyComponent extends Component
     healthBar = 0
     healthBarCo
     movementTimer
+    IS_ALERTED
+    TEXT_ACTIVE
+    TEXT_ACTIVE_FRAMES
+    alertText
+    MOVEMENT_INITIALIZED
+    levelAreaXLeft
+    levelAreaXRight
+    levelAreaYUp
+    levelAreaYDown
+    levelAreaConnectedEdgeUp
+    levelAreaConnectedEdgeDown
+    levelAreaConnectedEdgeLeft
+    levelAreaConnectedEdgeRight
     
     start(ctx)
     {
@@ -1626,6 +1753,10 @@ class enemyComponent extends Component
         this.IS_DEAD = false
         this.HEALTH_INITIALIZED = false
         this.movementTimer = 0
+        this.IS_ALERTED = false
+        this.TEXT_ACTIVE
+        this.TEXT_ACTIVE_FRAMES = 0
+        this.MOVEMENT_INITIALIZED = false
         //console.log("started enemy")
         //this.getTransform().x = 100
         //this.getTransform().y = 120
@@ -1652,27 +1783,57 @@ class enemyComponent extends Component
             this.addListener(ecc)
             ecc.addListener(this)
         }
+
+        if (this.IS_ALERTED == false)
+        {
+            let playerGO = gameObject.getObjectByName("playerGameObject")
+            let playerX = playerGO.Transform.x
+            let playerY = playerGO.Transform.y
+            let distance = Math.sqrt(((this.getTransform().x - playerX)*(this.getTransform().x - playerX)) + ((this.getTransform().y - playerY)*(this.getTransform().y - playerY)))
+            if (distance <= 50)
+            {
+                this.IS_ALERTED = true
+                this.TEXT_ACTIVE = true
+                let alertedText = new enemyAlertGameObject("enemyAlertGameObject")
+                gameObject.instantiate(alertedText)
+                let alertedTextCO = alertedText.getComponent("enemyAlertComponent")
+                alertedTextCO.linkedEnemy = this
+                this.alertText = alertedText
+            }
+        }
         
         if (this.IS_DEAD == false)
         {
-            this.up = 0
-            this.left = 0
-            this.down = 0
-            this.right = 0
+            if (this.IS_ALERTED)
+            {
+            //this.up = 0
+            //this.left = 0
+            //this.down = 0
+            //this.right = 0
 
             if (this.movementTimer <= 30)
             {
-                this.up = 0 // was -1
-                this.down = 0
+                if (this.MOVEMENT_INITIALIZED == false)
+                {
+                this.up = Math.floor(Math.random() * 2) * -1
+                this.down = Math.floor(Math.random() * 2)
+                this.left = Math.floor(Math.random() * 2) * -1
+                this.right = Math.floor(Math.random() * 2)
+                this.MOVEMENT_INITIALIZED = true
+                }
+
                 this.movementTimer++
             }
             else 
             {
                 this.up = 0
                 this.down = 0 //was 1
+                this.left = 0
+                this.right = 0
                 if (this.movementTimer >= 60)
                 {
                     this.movementTimer = 0
+                    this.MOVEMENT_INITIALIZED = false
                 }
                 else
                 {
@@ -1680,20 +1841,29 @@ class enemyComponent extends Component
                 }
             }
             
-            if (this.eAccel < 5)
+            this.evx = this.left + this.right
+            this.evy = this.up + this.down
+
+            if (this.evx != 0 || this.evy != 0)
+            {
+                this.IS_MOVING = true
+            }
+            else
+            {
+                this.IS_MOVING = false
+            }
+
+            if (this.IS_MOVING && this.eAccel < 1)
             {
                 this.eAccel++
             }
             
-            else if (this.eAccel > 0)
+            else if (this.IS_MOVING == false && this.eAccel > 0)
             {
                 this.eAccel--
             }
 
             this.IS_MOVING = this.eAccel > 0
-
-            this.evx = this.left + this.right
-            this.evy = this.up + this.down
 
             this.magnitude = Math.sqrt((this.evx * this.evx) + (this.evy * this.evy)) 
 
@@ -1708,17 +1878,69 @@ class enemyComponent extends Component
             }
 
             this.getTransform().x += this.evx * this.eAccel
-            this.getTransform().y += this.evy * this.eAccel 
+            this.getTransform().y += this.evy * this.eAccel
+
+            let nextXLocation = this.getTransform().x + this.evx * this.eAccel
+            let nextYLocation = this.getTransform().y + this.evy * this.eAccel
+
+            console.log(nextXLocation + " " + nextYLocation + " " + this.eAccel)
+            
+            if (this.levelAreaConnectedEdgeUp == false)
+            {
+                if (nextYLocation < this.levelAreaYUp)
+                {
+                nextYLocation = this.levelAreaYUp
+                }
+            }
+            if (this.levelAreaConnectedEdgeDown == false)
+            {
+                if (nextYLocation + this.enemyHeight > this.levelAreaYDown)
+                {
+                    nextYLocation = this.levelAreaYDown - this.enemyHeight
+                }
+            }
+            if (this.levelAreaConnectedEdgeLeft == false)
+            {
+                if (nextXLocation < this.levelAreaXLeft)
+                {
+                    nextXLocation = this.levelAreaXLeft
+                }
+            }
+            if (this.levelAreaConnectedEdgeRight == false)
+            {
+                if (nextXLocation + this.enemyWidth > this.levelAreaXRight)
+                {
+                    nextXLocation = this.levelAreaXRight - this.enemyWidth
+                }
+            }
+
+            this.getTransform().x = nextXLocation
+            this.getTransform().y = nextYLocation
+
+            if (this.TEXT_ACTIVE && this.TEXT_ACTIVE_FRAMES <= 30)
+            {
+                this.TEXT_ACTIVE_FRAMES++
+            }
+            else if (this.TEXT_ACTIVE_FRAMES > 30)
+            {
+                this.alertText.destroy()
+            }
         }
-        else
-        {
-            let collider = this.componentParent.getComponent("RectangleCollider")
-            collider.colliderColor = "black"
-            this.IS_MOVING = false
-            this.healthBar.destroy()
-            //this.evx = 0
-            //this.evy = 0
-        }
+            }
+            else
+            {
+                let collider = this.componentParent.getComponent("RectangleCollider")
+                collider.colliderColor = "black"
+                this.IS_MOVING = false
+                this.healthBar.destroy()
+                //this.evx = 0
+                //this.evy = 0
+            }
+    }
+
+    decideMovementDirection()
+    {
+
     }
 
     handleUpdate(component, eventName)
@@ -1754,6 +1976,11 @@ class enemyComponent extends Component
             }
         }
     }
+}
+
+class enemyBulletGameObject extends gameObject
+{
+
 }
 
 class enemyHealthBarGameObject extends gameObject
@@ -1818,6 +2045,9 @@ class enemyHealthBarDrawComponent extends Component
 
     drawScreen(ctx)
     {
+        let amount = 0
+        let toDraw = false
+        
         this.healthBarParentCo = this.componentParent.getComponent("enemyHealthBarComponent")
         this.healthBarParent = this.healthBarParentCo.healthBarParent
         this.currentHealth = this.healthBarParentCo.currentHealth
@@ -1832,6 +2062,29 @@ class enemyHealthBarDrawComponent extends Component
         let guiX = guiValues.x
         let guiY = guiValues.y
 
+        let currentAspectRatio = ctx.canvas.width / ctx.canvas.height
+
+        if (EngineGlobals.requestedAspectRatio > currentAspectRatio)
+        {
+            let desiredHeight = ctx.canvas.width/EngineGlobals.requestedAspectRatio //top and bottom
+            amount = (ctx.canvas.height - desiredHeight) / 2
+
+            if (guiY > amount && guiY < ctx.canvas.height - amount)
+            {
+                toDraw = true
+            }
+        }
+        else
+        {
+            let desiredWidth = ctx.canvas.height * EngineGlobals.requestedAspectRatio //sides
+            let amount = (ctx.canvas.width - desiredWidth) / 2
+            
+            if (guiX > amount && guiX < ctx.canvas.width - amount)
+            {
+                toDraw = true
+            }
+        }
+
         //let guiX = enemyX
         //let guiY = enemyY
 
@@ -1841,15 +2094,50 @@ class enemyHealthBarDrawComponent extends Component
 
             ctx.fillStyle = "red"
 
+            if (toDraw)
+            {
             ctx.fillRect(guiX,guiY,50,10)
+            }
 
             ctx.fillStyle = "green"
 
+            if (toDraw)
+            {
             ctx.fillRect(guiX,guiY,(50 * healthPercentage),10)
+            }
 
-            console.log("health bar drawn")
+            //console.log("health bar drawn")
         }
 
+    }
+}
+
+class enemyAlertGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new enemyAlertComponent())
+    }
+}
+
+class enemyAlertComponent extends Component
+{
+    componentName = "enemyAlertComponent"
+
+    linkedEnemy
+
+    text
+
+    start()
+    {
+       this.text = new Textbox("white", "15px Arial","!","left")
+       this.componentParent.addComponent(this.text)
+    }
+    
+    update()
+    {
+        this.getTransform().x = this.linkedEnemy.getTransform().x
+        this.getTransform().y = this.linkedEnemy.getTransform().y - 15
     }
 }
 
@@ -1924,6 +2212,8 @@ class weaponControllerComponent extends Component
     {
         if(eventName == "weaponPickup")
         {
+            console.log("weapon picked up")
+            
             let weaponName = component.containedWeapon
 
             switch (weaponName)
@@ -1982,8 +2272,8 @@ class weaponPickupComponent extends Component
         let shcgo = gameObject.getObjectByName("shooterControllerGameObject")
         let shcc = shcgo.getComponent("shooterControllerComponent")
         this.addListener(shcc)
-        //this.getTransform().x = -77
-        //this.getTransform().y = -77
+        //this.getTransform().x = -770
+        //this.getTransform().y = -770
     }
 
     update()
@@ -2043,9 +2333,19 @@ class cameraTrackerGameObject extends gameObject
 class cameraTrackerComponent extends Component
 {
     componentName = "cameraTrackerComponent"
+
+    LEVELS_INITIALIZED = false
+    
+    start()
+    {
+        this.getTransform().x = 80
+        this.getTransform().y = 270
+    }
     
     update()
     {
+        if (this.LEVELS_INITIALIZED)
+        {
         let player = gameObject.getObjectByName("playerGameObject")
 
         let boundingBox = 30
@@ -2069,9 +2369,18 @@ class cameraTrackerComponent extends Component
         {
             this.getTransform().y += .2 * (differenceY + boundingBox)
         }
+    }
 
         Camera.main.Transform.x = this.getTransform().x
         Camera.main.Transform.y = this.getTransform().y
+    }
+
+    handleUpdate(component, eventName)
+    {
+        if (eventName == "levelsInitialized")
+        {
+            this.LEVELS_INITIALIZED = true
+        }
     }
 }
 
@@ -2096,7 +2405,7 @@ class GameScene extends sceneContainer
         this.addGameObject(new debugGUIObject("debugGUIObject"))
         this.addGameObject(new weaponControllerGameObject("weaponControllerGameObject"))
         this.addGameObject(new weaponPickupGameObject("weaponPickupGameObject"))
-        this.addGameObject(new enemyGameObject("enemyGameObject"))
+        //this.addGameObject(new enemyGameObject("enemyGameObject"))
         this.addGameObject(new enemyControllerGameObject("enemyControllerGameObject"))
         this.addGameObject(new levelAreaConfigurationGameObject("levelAreaConfigurationGameObject"))
     }
@@ -2117,6 +2426,7 @@ class TitleScene extends sceneContainer
     start()
     {
         this.addGameObject(new titleControllerGameObject("titleControllerGameObject"))
+        this.addGameObject(new titleMessageControllerGameObject("titleMessageControllerGameObject"))
     }
     update()
     {

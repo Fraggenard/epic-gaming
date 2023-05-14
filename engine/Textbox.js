@@ -19,7 +19,6 @@ class Textbox extends Component
     {
         ctx.fillStyle = this.textColor
         ctx.font = this.textFont
-        console.log(ctx.font)
         ctx.textAlign = this.align
         ctx.fillText(this.textString, this.getTransform().x, this.getTransform().y)
     }
