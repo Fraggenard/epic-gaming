@@ -108,9 +108,90 @@ class titleControllerDrawComponent extends Component
     }
 }
 
-
-
 //Main Game
+
+class scoreControllerGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new Textbox("white","15px Arial","blank","left"))
+        this.addComponent(new scoreControllerComponent())
+        this.addComponent(new scoreControllerDrawComponent())
+    }
+}
+
+class scoreControllerComponent extends Component
+{
+    componentName = "scoreControllerComponent"
+
+    enemyKills = 0
+
+    start()
+    {
+        this.componentParent.doNotDestroyOnLoad()
+    }
+
+    handleUpdate(component,eventName)
+    {
+        if (eventName == "playerWon")
+        {
+            sceneManager.changeScene(3)
+        }
+
+        if (eventName == "enemyKill")
+        {
+            this.enemyKills++
+        }
+    }
+}
+
+class scoreControllerDrawComponent extends Component
+{
+    componentName = "scoreControllerDrawComponent"
+    
+    text
+    score
+
+    start()
+    {
+        this.text = this.componentParent.getComponent("Textbox")
+        this.score = this.componentParent.getComponent("scoreControllerComponent")
+    }
+
+    draw(ctx)
+    {
+        this.text.textString = `Enemy Kills: ${this.score.enemyKills}`
+
+        let zeros = Camera.getZeros(ctx)
+        
+        let currentAspectRatio = ctx.canvas.width / ctx.canvas.height
+        let xWidth = 0
+        let yHeight = 0
+
+        if (EngineGlobals.requestedAspectRatio > currentAspectRatio) //letterboxes top and bottom
+        {
+            yHeight = ctx.canvas.width / EngineGlobals.requestedAspectRatio
+
+            xWidth = ctx.canvas.width
+        }
+        else //letterboxes on side
+        {
+            xWidth = ctx.canvas.height * EngineGlobals.requestedAspectRatio
+
+            yHeight = ctx.canvas.height
+        }
+
+        let x = (xWidth / 3)
+        //console.log(xWidth)
+        //console.log(ctx.measureText(text.textString).width)
+        let y = yHeight - (yHeight / 12)
+        let worldCoords = Camera.screenToWorld(ctx, zeros.zeroX + x,zeros.zeroY + y)
+        //console.log(worldCoords.x)
+        this.text.getTransform().x = worldCoords.x
+        this.text.getTransform().y = worldCoords.y
+    }
+}
+
 
 class startControllerGameObject extends gameObject
 {
@@ -220,9 +301,9 @@ class debugGUIComponent extends Component
     {
         //console.log("screen draw")
 
-        ctx.fillStyle = "yellow"
+        //ctx.fillStyle = "yellow"
 
-        ctx.fillRect(0, 0, 50, 50)
+        //ctx.fillRect(0, 0, 50, 50)
     }
 }
 
@@ -510,6 +591,12 @@ class playerComponent extends Component
             this.getTransform().x = 80
             this.getTransform().y = 270
         }
+
+        if (eventName == "playerShot")
+        {
+            console.log("ouchies")
+            sceneManager.changeScene(2)
+        }
     }
 }
 
@@ -699,7 +786,7 @@ class levelAreaConfigurationComponent extends Component
                 let y = 0
                 let width = 300
                 let height = 300
-                let color = "blue"
+                let color = "#5271ff"
                 let enemies = 0
                 let weapons = 0
 
@@ -729,7 +816,7 @@ class levelAreaConfigurationComponent extends Component
                 let y = 0
                 let width = 300
                 let height = 300
-                let color = "blue"
+                let color = "#5271ff"
                 let enemies = Math.floor(Math.random() * 4)
                 let weapons = Math.floor(Math.random() * 2)
 
@@ -948,6 +1035,14 @@ class levelAreaConfigurationComponent extends Component
                     }
                 }
 
+                if (i == this.numberOfLevels - 1)
+                {
+                    let win = new winConditionGameObject("winConditionGameObject")
+                    gameObject.instantiate(win)
+                    win.Transform.x = x + width - (width / 2)
+                    win.Transform.y = y + height - (height / 2)
+                }
+
                 let levelGO = new levelAreaGameObject("levelAreaGameObject")
                 let levelCO = new levelAreaComponent(x,y,width,height,color,enemies,weapons,edgeUp,edgeDown,edgeLeft,edgeRight,transition)
                 levelGO.addComponent(levelCO)
@@ -1015,12 +1110,47 @@ class levelAreaConfigurationComponent extends Component
     }
 }
 
+class winConditionGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new winConditionComponent())
+        this.addComponent(new RectangleCollider(20,20,"white",true))
+        this.addComponent(new RectangleColliderDraw())
+    }
+}
+
+class winConditionComponent extends Component
+{
+    componentName = "winConditionComponent"
+    
+    update()
+    {
+        if (this.componentListeners.length == 0)
+        {
+            let scoreGO = gameObject.getObjectByName("scoreControllerGameObject")
+            let scoreCO = scoreGO.getComponent("scoreControllerComponent")
+            this.addListener(scoreCO)
+        }
+        
+        let playerGO = gameObject.getObjectByName("playerGameObject")
+        let playerRC = playerGO.getComponent("RectangleCollider")
+
+        let winCollider = this.componentParent.getComponent("RectangleCollider")
+
+        if (winCollider.isColliding(playerRC))
+        {
+            this.updateListeners("playerWon")
+        }
+    }
+}
+
 class shooterGameObject extends gameObject
 {
     start()
     {
         this.addComponent(new shooterComponent())
-        this.addComponent(new CircleCollider(2, "green", true))
+        this.addComponent(new CircleCollider(2, "#fc7f26", true))
         this.addComponent(new CircleColliderDraw())
     }
 }
@@ -1721,11 +1851,14 @@ class enemyComponent extends Component
     healthBar = 0
     healthBarCo
     movementTimer
+    shootingTimer
+    ON_SHOOT_COOLDOWN
     IS_ALERTED
     TEXT_ACTIVE
     TEXT_ACTIVE_FRAMES
     alertText
     MOVEMENT_INITIALIZED
+    KILL_REGISTERED
     levelAreaXLeft
     levelAreaXRight
     levelAreaYUp
@@ -1753,10 +1886,13 @@ class enemyComponent extends Component
         this.IS_DEAD = false
         this.HEALTH_INITIALIZED = false
         this.movementTimer = 0
+        this.shootingTimer = 0
+        this.ON_SHOOT_COOLDOWN = false
         this.IS_ALERTED = false
         this.TEXT_ACTIVE
         this.TEXT_ACTIVE_FRAMES = 0
         this.MOVEMENT_INITIALIZED = false
+        this.KILL_REGISTERED = false
         //console.log("started enemy")
         //this.getTransform().x = 100
         //this.getTransform().y = 120
@@ -1782,6 +1918,9 @@ class enemyComponent extends Component
             let ecc = ecgo.getComponent("enemyControllerComponent")
             this.addListener(ecc)
             ecc.addListener(this)
+            let scoreGO = gameObject.getObjectByName("scoreControllerGameObject")
+            let scoreCO = scoreGO.getComponent("scoreControllerComponent")
+            this.addListener(scoreCO)
         }
 
         if (this.IS_ALERTED == false)
@@ -1790,7 +1929,7 @@ class enemyComponent extends Component
             let playerX = playerGO.Transform.x
             let playerY = playerGO.Transform.y
             let distance = Math.sqrt(((this.getTransform().x - playerX)*(this.getTransform().x - playerX)) + ((this.getTransform().y - playerY)*(this.getTransform().y - playerY)))
-            if (distance <= 50)
+            if (distance <= 150)
             {
                 this.IS_ALERTED = true
                 this.TEXT_ACTIVE = true
@@ -1838,6 +1977,34 @@ class enemyComponent extends Component
                 else
                 {
                     this.movementTimer++
+                }
+            }
+
+            if (this.shootingTimer <= 30)
+            {
+                if (this.ON_SHOOT_COOLDOWN == false)
+                {
+                    let playerGO = gameObject.getObjectByName("playerGameObject")
+
+                    let bullet = new enemyBulletGameObject("enemyBulletGameObject")
+                    bullet.addComponent(new enemyBulletComponent(this.getTransform().x,this.getTransform().y,playerGO.Transform.x,playerGO.Transform.y))
+                    gameObject.instantiate(bullet)
+                    console.log("enemyShoot")
+                    this.ON_SHOOT_COOLDOWN = true
+                }
+
+                this.shootingTimer++
+            }
+            else
+            {
+                if (this.shootingTimer >= 90)
+                {
+                    this.shootingTimer = 0
+                    this.ON_SHOOT_COOLDOWN = false
+                }
+                else
+                {
+                    this.shootingTimer++
                 }
             }
             
@@ -1933,6 +2100,11 @@ class enemyComponent extends Component
                 collider.colliderColor = "black"
                 this.IS_MOVING = false
                 this.healthBar.destroy()
+                if (this.KILL_REGISTERED == false)
+                {
+                    this.updateListeners("enemyKill")
+                    this.KILL_REGISTERED = true
+                }
                 //this.evx = 0
                 //this.evy = 0
             }
@@ -1980,7 +2152,92 @@ class enemyComponent extends Component
 
 class enemyBulletGameObject extends gameObject
 {
+    start()
+    {
+        this.addComponent(new RectangleCollider(5,5,"red",true))
+        this.addComponent(new RectangleColliderDraw())
+    }
+}
 
+class enemyBulletComponent extends Component
+{
+    componentName = "enemyBulletComponent"
+    
+    bvx
+    bvy
+    bulletSpeed = 2
+    lifeTime = 0
+    maxlifeTime = 1500
+    originX
+    originY
+    finalX
+    finalY
+    differenceX
+    differenceY
+    MADE_COLLISION = false
+
+    constructor(originX,originY,finalX,finalY)
+    {
+        super()
+        this.originX = originX
+        this.originY = originY
+        this.finalX = finalX
+        this.finalY = finalY
+    }
+    
+    start()
+    {   
+        this.bvx = 0
+        this.bvy = 0
+        
+        this.getTransform().x = this.originX
+        this.getTransform().y = this.originY
+
+        this.differenceX = this.finalX - this.getTransform().x
+        this.differenceY = this.finalY - this.getTransform().y
+
+        //console.log(this.differenceX + " " + this.differenceY)
+
+        let theta = Math.atan2(this.differenceY, this.differenceX)
+
+        //console.log(theta + "")
+
+        this.differenceX = this.bulletSpeed * Math.cos(theta)
+        this.differenceY = this.bulletSpeed * Math.sin(theta)
+
+        this.bvx += this.differenceX
+        this.bvy += this.differenceY
+    }
+
+    update(ctx)
+    {   
+        if (this.componentListeners.length == 0)
+        {
+            let playerGO = gameObject.getObjectByName("playerGameObject")
+            let playerCO = playerGO.getComponent("playerComponent")
+            this.addListener(playerCO)
+        }   
+        
+            this.getTransform().x += this.bvx
+            this.getTransform().y += this.bvy
+
+            let playerGO = gameObject.getObjectByName("playerGameObject")
+            let playerRC = playerGO.getComponent("RectangleCollider")
+
+            let bullet = this.componentParent.getComponent("RectangleCollider")
+
+            if(bullet.isColliding(playerRC))
+            {
+                this.updateListeners("playerShot")
+            }
+
+            this.lifeTime++
+            
+            if (this.lifeTime >= this.maxlifeTime)
+            {
+                this.componentParent.destroy()
+            }
+    }
 }
 
 class enemyHealthBarGameObject extends gameObject
@@ -2384,6 +2641,210 @@ class cameraTrackerComponent extends Component
     }
 }
 
+// Death Screen
+
+class deathMessageGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new Textbox("white","50px Arial","You Died","center"))
+        this.addComponent(new deathMessageDrawComponent())
+    }
+}
+
+class deathMessageDrawComponent extends Component
+{
+    draw(ctx)
+    {
+        let zeros = Camera.getZeros(ctx)
+        
+        let currentAspectRatio = ctx.canvas.width / ctx.canvas.height
+        let xWidth = 0
+        let yHeight = 0
+
+        if (EngineGlobals.requestedAspectRatio > currentAspectRatio) //letterboxes top and bottom
+        {
+            yHeight = ctx.canvas.width / EngineGlobals.requestedAspectRatio
+
+            xWidth = ctx.canvas.width
+        }
+        else //letterboxes on side
+        {
+            xWidth = ctx.canvas.height * EngineGlobals.requestedAspectRatio
+
+            yHeight = ctx.canvas.height
+        }
+
+        let message = this.componentParent.getComponent("Textbox")
+        let x2 = (xWidth / 4)
+        let y2 = (yHeight / 3)
+
+        //let x2 = (xWidth / 3)
+        //let y2 = yHeight - (yHeight / 3)
+        let worldCoords = Camera.screenToWorld(ctx, zeros.zeroX + x2,zeros.zeroY + y2)
+        message.getTransform().x = worldCoords.x
+        message.getTransform().y = worldCoords.y
+    }
+}
+
+class restartMessageGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new Textbox("white","20px Arial","Press E to Restart","center"))
+        this.addComponent(new restartMessageComponent())
+        this.addComponent(new restartMessageDrawComponent())
+    }
+}
+
+class restartMessageComponent extends Component
+{
+    update(ctx)
+    {   
+        if (Input.keysUp["e"])
+        {
+            sceneManager.changeScene(1)
+        }
+    }
+}
+
+class restartMessageDrawComponent extends Component
+{
+    draw(ctx)
+    {
+        let zeros = Camera.getZeros(ctx)
+        
+        let currentAspectRatio = ctx.canvas.width / ctx.canvas.height
+        let xWidth = 0
+        let yHeight = 0
+
+        if (EngineGlobals.requestedAspectRatio > currentAspectRatio) //letterboxes top and bottom
+        {
+            yHeight = ctx.canvas.width / EngineGlobals.requestedAspectRatio
+
+            xWidth = ctx.canvas.width
+        }
+        else //letterboxes on side
+        {
+            xWidth = ctx.canvas.height * EngineGlobals.requestedAspectRatio
+
+            yHeight = ctx.canvas.height
+        }
+
+        let text = this.componentParent.getComponent("Textbox")
+        let x = (xWidth / 3)
+        //console.log(xWidth)
+        //console.log(ctx.measureText(text.textString).width)
+        let y = yHeight - (yHeight / 3)
+        let worldCoords = Camera.screenToWorld(ctx, zeros.zeroX + x,zeros.zeroY + y)
+        //console.log(worldCoords.x)
+        text.getTransform().x = worldCoords.x
+        text.getTransform().y = worldCoords.y
+    }
+}
+
+// Win Screen
+
+class winMessageGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new Textbox("white","50px Arial","You Won!","center"))
+        this.addComponent(new winMessageDrawComponent())
+    }
+}
+
+class winMessageDrawComponent extends Component
+{
+    draw(ctx)
+    {
+        let zeros = Camera.getZeros(ctx)
+        
+        let currentAspectRatio = ctx.canvas.width / ctx.canvas.height
+        let xWidth = 0
+        let yHeight = 0
+
+        if (EngineGlobals.requestedAspectRatio > currentAspectRatio) //letterboxes top and bottom
+        {
+            yHeight = ctx.canvas.width / EngineGlobals.requestedAspectRatio
+
+            xWidth = ctx.canvas.width
+        }
+        else //letterboxes on side
+        {
+            xWidth = ctx.canvas.height * EngineGlobals.requestedAspectRatio
+
+            yHeight = ctx.canvas.height
+        }
+
+        let message = this.componentParent.getComponent("Textbox")
+        let x2 = (xWidth / 4)
+        let y2 = (yHeight / 3)
+
+        //let x2 = (xWidth / 3)
+        //let y2 = yHeight - (yHeight / 3)
+        let worldCoords = Camera.screenToWorld(ctx, zeros.zeroX + x2,zeros.zeroY + y2)
+        message.getTransform().x = worldCoords.x
+        message.getTransform().y = worldCoords.y
+    }
+}
+
+class playAgainMessageGameObject extends gameObject
+{
+    start()
+    {
+        this.addComponent(new Textbox("white","20px Arial","Press E to Play Again","center"))
+        this.addComponent(new playAgainMessageComponent())
+        this.addComponent(new playAgainMessageDrawComponent())
+    }
+}
+
+class playAgainMessageComponent extends Component
+{
+    update(ctx)
+    {   
+        if (Input.keysUp["e"])
+        {
+            sceneManager.changeScene(1)
+        }
+    }
+}
+
+class playAgainMessageDrawComponent extends Component
+{
+    draw(ctx)
+    {
+        let zeros = Camera.getZeros(ctx)
+        
+        let currentAspectRatio = ctx.canvas.width / ctx.canvas.height
+        let xWidth = 0
+        let yHeight = 0
+
+        if (EngineGlobals.requestedAspectRatio > currentAspectRatio) //letterboxes top and bottom
+        {
+            yHeight = ctx.canvas.width / EngineGlobals.requestedAspectRatio
+
+            xWidth = ctx.canvas.width
+        }
+        else //letterboxes on side
+        {
+            xWidth = ctx.canvas.height * EngineGlobals.requestedAspectRatio
+
+            yHeight = ctx.canvas.height
+        }
+
+        let text = this.componentParent.getComponent("Textbox")
+        let x = (xWidth / 3)
+        //console.log(xWidth)
+        //console.log(ctx.measureText(text.textString).width)
+        let y = yHeight - (yHeight / 3)
+        let worldCoords = Camera.screenToWorld(ctx, zeros.zeroX + x,zeros.zeroY + y)
+        //console.log(worldCoords.x)
+        text.getTransform().x = worldCoords.x
+        text.getTransform().y = worldCoords.y
+    }
+}
+
 class GameScene extends sceneContainer
 {
     start()
@@ -2409,32 +2870,15 @@ class GameScene extends sceneContainer
         this.addGameObject(new enemyControllerGameObject("enemyControllerGameObject"))
         this.addGameObject(new levelAreaConfigurationGameObject("levelAreaConfigurationGameObject"))
     }
-    update()
-    {
-
-    }
-    draw(ctx)
-    {
-
-    }
 }
-
-//Main Game
 
 class TitleScene extends sceneContainer
 {
     start()
     {
+        this.addGameObject(new scoreControllerGameObject("scoreControllerGameObject"))
         this.addGameObject(new titleControllerGameObject("titleControllerGameObject"))
         this.addGameObject(new titleMessageControllerGameObject("titleMessageControllerGameObject"))
-    }
-    update()
-    {
-
-    }
-    draw(ctx)
-    {
-    
     }
 }
 
@@ -2444,20 +2888,29 @@ class DeathScene extends sceneContainer
 {
     start()
     {
-
-    }
-    update()
-    {
-
-    }
-    draw(ctx)
-    {
-    
+        this.addGameObject(new deathMessageGameObject("deathMessageGameObject"))
+        this.addGameObject(new restartMessageGameObject())
     }
 }
 
+// Win Screen
+
+class WinScene extends sceneContainer
+{
+    start()
+    {
+        this.addGameObject(new winMessageGameObject("winMessageGameObject"))
+        this.addGameObject(new playAgainMessageGameObject("playAgainMessageGameObject"))
+    }
+}
+
+
 let gameScene = new GameScene("purple")
 let titleScene = new TitleScene("black")
+let deathScene = new DeathScene("black")
+let winScene = new WinScene("purple")
 sceneManager.addScene(titleScene)
 sceneManager.addScene(gameScene)
+sceneManager.addScene(deathScene)
+sceneManager.addScene(winScene)
 //console.log("added title scene")

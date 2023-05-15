@@ -145,7 +145,7 @@ for (let i = min; i <= max; i++)
   {
     let desiredHeight = canvas.width/EngineGlobals.requestedAspectRatio
     let amount = (canvas.height - desiredHeight) / 2
-    ctx.fillStyle = "magenta"
+    ctx.fillStyle = "#1f1f1f"
     ctx.fillRect(0,0,canvas.width, amount)
     ctx.fillRect(0,canvas.height-amount,canvas.width, amount)
   }
@@ -153,7 +153,7 @@ for (let i = min; i <= max; i++)
   {
     let desiredWidth = canvas.height * EngineGlobals.requestedAspectRatio
     let amount = (canvas.width - desiredWidth) / 2
-    ctx.fillStyle = "magenta"
+    ctx.fillStyle = "#1f1f1f"
     ctx.fillRect(0,0,amount, canvas.height)
     ctx.fillRect(canvas.width - amount,0,amount, canvas.height)
   }

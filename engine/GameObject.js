@@ -41,7 +41,7 @@ class gameObject
 
   doNotDestroyOnLoad()
   {
-    this.doNotDestroyOnLoad = true
+    this.markedDoNotDestroyOnLoad = true
   }
 
   static instantiate(gameObject)
